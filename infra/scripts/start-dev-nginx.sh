@@ -39,7 +39,7 @@ nohup setsid bash -c '
     cd /root/DataDisk/workspace/LVSUO/apps/api
     export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/lmsuo?schema=public"
     export JWT_SECRET="this-is-a-test-jwt-secret-min-32-chars-long-ok"
-    export APP_PORT=3001
+    export APP_PORT=3000
     exec node dist/main.js
 ' </dev/null >/tmp/lmsuo-api.log 2>&1 &
 disown
@@ -53,7 +53,7 @@ sleep 1
 # 写 .env(nginx 模式)
 cat > "$WEB_DIR/.env" << 'EOF'
 VITE_BASE_PATH=/lvsuo/
-VITE_API_PROXY_TARGET=http://localhost:3001
+VITE_API_PROXY_TARGET=http://localhost:3000
 VITE_APP_TITLE=智法云枢
 EOF
 
@@ -79,8 +79,8 @@ echo
 
 # API
 for i in 1 2 3 4 5 6 7 8; do
-    if curl -s -o /dev/null -w "" http://localhost:3001/api/counsel/v1/health 2>/dev/null; then
-        echo "✅ API (3001): $(curl -s http://localhost:3001/api/counsel/v1/health)"
+    if curl -s -o /dev/null -w "" http://localhost:3000/api/counsel/v1/health 2>/dev/null; then
+        echo "✅ API (3000): $(curl -s http://localhost:3000/api/counsel/v1/health)"
         break
     fi
     sleep 1
@@ -99,7 +99,7 @@ echo
 echo "📍 访问入口:"
 echo "   nginx:      https://wxf-prod.huntercat.cn/lvsuo/"
 echo "   本地 vite:   http://localhost:5173/lvsuo/"
-echo "   Swagger:    http://localhost:3001/api/counsel/v1/docs"
+echo "   Swagger:    http://localhost:3000/api/counsel/v1/docs"
 echo
 echo "🔑 测试账号:"
 echo "   平台超管: platform-root / superadmin / SuperAdmin@2026!"

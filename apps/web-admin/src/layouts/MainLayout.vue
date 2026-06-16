@@ -104,11 +104,14 @@ const onGoPlatformConsole = () => {
         <el-menu-item index="/leads">
           <span>线索看板</span>
         </el-menu-item>
-        <el-menu-item index="/marketing">
-          <span>内容合规审查</span>
+        <el-menu-item index="/clients">
+          <span>客户中心</span>
         </el-menu-item>
         <el-menu-item index="/products">
           <span>服务产品库</span>
+        </el-menu-item>
+        <el-menu-item index="/quotes">
+          <span>报价卡</span>
         </el-menu-item>
         <el-menu-item index="/matters">
           <span>案件看板</span>

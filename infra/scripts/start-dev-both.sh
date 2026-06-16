@@ -4,7 +4,7 @@
 # 用途: 同时跑两个 Vite 实例
 #       Vite A (5173, base=/)    → http://127.0.0.1:5173/         (本地直接)
 #       Vite B (5174, base=/lvsuo/) → http://127.0.0.1:5174/lvsuo/   (走 nginx)
-#       API 共享 3001
+#       API 共享 3000
 # ============================================================================
 
 set -e
@@ -32,7 +32,7 @@ docker compose up -d 2>&1 | tail -3
 
 # ---------- 3. 启动 API ----------
 echo
-echo "🚀 启动后端 API(共享 3001)..."
+echo "🚀 启动后端 API(共享 3000)..."
 pkill -9 -f "node dist/main" 2>/dev/null || true
 sleep 1
 
@@ -41,7 +41,7 @@ nohup setsid bash -c '
     cd /root/DataDisk/workspace/LVSUO/apps/api
     export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/lmsuo?schema=public"
     export JWT_SECRET="this-is-a-test-jwt-secret-min-32-chars-long-ok"
-    export APP_PORT=3001
+    export APP_PORT=3000
     exec node dist/main.js
 ' </dev/null >/tmp/lmsuo-api.log 2>&1 &
 disown
@@ -87,8 +87,8 @@ echo
 
 # API
 for i in 1 2 3 4 5 6 7 8; do
-    if curl -s -o /dev/null -w "" http://localhost:3001/api/counsel/v1/health 2>/dev/null; then
-        echo "✅ API (3001): $(curl -s http://localhost:3001/api/counsel/v1/health)"
+    if curl -s -o /dev/null -w "" http://localhost:3000/api/counsel/v1/health 2>/dev/null; then
+        echo "✅ API (3000): $(curl -s http://localhost:3000/api/counsel/v1/health)"
         break
     fi
     sleep 1
@@ -117,7 +117,7 @@ echo "📍 访问入口:"
 echo "   本地直接:   http://127.0.0.1:5173/"
 echo "   走 nginx:   http://127.0.0.1:80/lvsuo/    (需先配 local nginx)"
 echo "   远程 nginx: https://wxf-prod.huntercat.cn/lvsuo/"
-echo "   Swagger:   http://localhost:3001/api/counsel/v1/docs"
+echo "   Swagger:   http://localhost:3000/api/counsel/v1/docs"
 echo
 echo "🔑 测试账号:"
 echo "   平台超管: platform-root / superadmin / SuperAdmin@2026!"
