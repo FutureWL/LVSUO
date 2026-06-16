@@ -54,8 +54,18 @@ export class LeadController {
     @Query('page') page = '1',
     @Query('pageSize') pageSize = '20',
     @Query('keyword') keyword?: string,
+    @Query('status') status?: string,
+    @Query('urgency') urgency?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
   ) {
-    return this.lead.findByTenant(user.tid, Number(page), Number(pageSize), keyword);
+    return this.lead.findByTenant(user.tid, Number(page), Number(pageSize), {
+      keyword,
+      status: status as any,
+      urgency: urgency as any,
+      from,
+      to,
+    });
   }
 
   @Get(':id')

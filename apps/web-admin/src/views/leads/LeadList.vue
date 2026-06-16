@@ -3,7 +3,7 @@ import http from '@/api/http';
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
-import { LEAD_STATUS_NAME, type Lead } from '@lm-unity/shared';
+import { LEAD_STATUS_NAME, LeadStatus, type Lead, type UrgencyLevel } from '@lm-unity/shared';
 
 const router = useRouter();
 const items = ref<Lead[]>([]);
@@ -12,6 +12,23 @@ const loading = ref(false);
 const page = ref(1);
 const pageSize = ref(20);
 const keyword = ref('');
+
+// B2 筛选条件
+const filterStatus = ref<LeadStatus | ''>('');
+const filterUrgency = ref<UrgencyLevel | ''>('');
+const filterDateRange = ref<[string, string] | null>(null);
+
+const URGENCY_OPTIONS: { label: string; value: UrgencyLevel }[] = [
+  { label: '低', value: 'LOW' },
+  { label: '中', value: 'MEDIUM' },
+  { label: '高', value: 'HIGH' },
+  { label: '紧急', value: 'URGENT' },
+];
+
+const STATUS_OPTIONS = (Object.keys(LEAD_STATUS_NAME) as LeadStatus[]).map((s) => ({
+  label: LEAD_STATUS_NAME[s],
+  value: s,
+}));
 
 const dialogVisible = ref(false);
 const form = ref({
@@ -31,6 +48,10 @@ async function load() {
       page: page.value,
       pageSize: pageSize.value,
       keyword: keyword.value.trim() || undefined,
+      status: filterStatus.value || undefined,
+      urgency: filterUrgency.value || undefined,
+      from: filterDateRange.value?.[0],
+      to: filterDateRange.value?.[1],
     });
     items.value = res.items;
     total.value = res.total;
@@ -46,9 +67,15 @@ function onSearch() {
 
 function onReset() {
   keyword.value = '';
+  filterStatus.value = '';
+  filterUrgency.value = '';
+  filterDateRange.value = null;
   page.value = 1;
   load();
 }
+
+const hasFilter = () =>
+  !!keyword.value || !!filterStatus.value || !!filterUrgency.value || !!filterDateRange.value;
 
 function goDetail(row: Lead) {
   router.push(`/leads/${row.id}`);
@@ -78,17 +105,48 @@ onMounted(load);
       </div>
       <el-button type="primary" @click="dialogVisible = true">+ 新建线索</el-button>
     </div>
-    <div style="margin-top: 16px; display: flex; gap: 8px; align-items: center">
+    <div style="margin-top: 16px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap">
       <el-input
         v-model="keyword"
         placeholder="按客户名 / 手机号搜索"
         clearable
-        style="width: 280px"
+        style="width: 240px"
         @keyup.enter="onSearch"
         @clear="onReset"
       />
+      <el-select
+        v-model="filterStatus"
+        placeholder="状态"
+        clearable
+        style="width: 160px"
+        @change="onSearch"
+        @clear="onSearch"
+      >
+        <el-option v-for="o in STATUS_OPTIONS" :key="o.value" :label="o.label" :value="o.value" />
+      </el-select>
+      <el-select
+        v-model="filterUrgency"
+        placeholder="紧急程度"
+        clearable
+        style="width: 120px"
+        @change="onSearch"
+        @clear="onSearch"
+      >
+        <el-option v-for="o in URGENCY_OPTIONS" :key="o.value" :label="o.label" :value="o.value" />
+      </el-select>
+      <el-date-picker
+        v-model="filterDateRange"
+        type="daterange"
+        range-separator="至"
+        start-placeholder="开始日期"
+        end-placeholder="结束日期"
+        value-format="YYYY-MM-DD"
+        unlink-panels
+        style="width: 260px"
+        @change="onSearch"
+      />
       <el-button type="primary" @click="onSearch">搜索</el-button>
-      <el-button v-if="keyword" @click="onReset">重置</el-button>
+      <el-button v-if="hasFilter()" @click="onReset">重置</el-button>
     </div>
     <el-table v-loading="loading" :data="items" stripe style="margin-top: 16px" @row-click="goDetail">
       <el-table-column prop="clientName" label="客户名称" />

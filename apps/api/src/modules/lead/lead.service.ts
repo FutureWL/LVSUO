@@ -1,7 +1,17 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
-import { Lead, LeadStatus, CreateLeadInput, TriageResult, type PageResponse } from '@lm-unity/shared';
+import { PrismaClient, Prisma } from '@prisma/client';
+import { Lead, LeadStatus, CreateLeadInput, TriageResult, type PageResponse, type UrgencyLevel } from '@lm-unity/shared';
 import { buildPage } from '../../common/pagination';
+
+export interface LeadListFilters {
+  keyword?: string;
+  status?: LeadStatus;
+  urgency?: UrgencyLevel;
+  /** YYYY-MM-DD 本地时区起始日期(含) */
+  from?: string;
+  /** YYYY-MM-DD 本地时区结束日期(含) */
+  to?: string;
+}
 
 @Injectable()
 export class LeadService {
@@ -23,19 +33,33 @@ export class LeadService {
     });
   }
 
-  async findByTenant(tenantId: string, page = 1, pageSize = 20, keyword?: string): Promise<PageResponse<Lead>> {
-    const trimmed = keyword?.trim();
-    const where = {
-      tenantId,
-      ...(trimmed
-        ? {
-            OR: [
-              { clientName: { contains: trimmed, mode: 'insensitive' as const } },
-              { contactMobile: { contains: trimmed, mode: 'insensitive' as const } },
-            ],
-          }
-        : {}),
-    };
+  async findByTenant(
+    tenantId: string,
+    page = 1,
+    pageSize = 20,
+    filters: LeadListFilters = {},
+  ): Promise<PageResponse<Lead>> {
+    const where: Prisma.LeadWhereInput = { tenantId };
+
+    const trimmed = filters.keyword?.trim();
+    if (trimmed) {
+      where.OR = [
+        { clientName: { contains: trimmed, mode: 'insensitive' } },
+        { contactMobile: { contains: trimmed, mode: 'insensitive' } },
+      ];
+    }
+    if (filters.status) where.intakeStatus = filters.status;
+    if (filters.urgency) where.urgencyLevel = filters.urgency;
+    if (filters.from || filters.to) {
+      where.createdAt = {};
+      if (filters.from) where.createdAt.gte = new Date(`${filters.from}T00:00:00`);
+      if (filters.to) {
+        // end-of-day 本地时区
+        const end = new Date(`${filters.to}T23:59:59.999`);
+        where.createdAt.lte = end;
+      }
+    }
+
     const [items, total] = await this.prisma.$transaction([
       this.prisma.lead.findMany({
         where,
