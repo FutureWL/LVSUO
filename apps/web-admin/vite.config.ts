@@ -33,10 +33,18 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 5173,
       proxy: {
-        // 直接访问 vite 时的 API 代理(走 nginx 时不会经过这里)
+        // 1) 直接访问 vite 时的 API 代理
+        //    http://localhost:5173/api/... → 后端
         '/api': {
           target: env.VITE_API_PROXY_TARGET || 'http://localhost:3000',
           changeOrigin: true,
+        },
+        // 2) 通过 nginx 子目录代理时的 API 路径
+        //    /lvsuo/api/counsel/v1/health → /api/counsel/v1/health
+        '/lvsuo/api': {
+          target: env.VITE_API_PROXY_TARGET || 'http://localhost:3000',
+          changeOrigin: true,
+          rewrite: (p) => p.replace(/^\/lvsuo\/api/, '/api'),
         },
       },
       hmr: {
