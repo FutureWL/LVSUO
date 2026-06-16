@@ -20,4 +20,14 @@ auth.rehydrate();
 app.use(router);
 app.use(ElementPlus, { locale: zhCn });
 
+// 全局错误兜底:组件渲染 / 生命周期抛出的同步异常 → 跳到 /error?status=500
+// HTTP 错误走 axios 拦截器(已分类处理)
+app.config.errorHandler = (err, _instance, info) => {
+  // eslint-disable-next-line no-console
+  console.error('[vue error]', err, info);
+  if (router.currentRoute.value.name !== 'error') {
+    router.replace({ name: 'error', query: { status: '500', message: '页面渲染异常' } });
+  }
+};
+
 app.mount('#app');

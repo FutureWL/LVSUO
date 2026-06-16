@@ -2,6 +2,7 @@ import axios, { type AxiosInstance, type AxiosResponse, type InternalAxiosReques
 import { ElMessage } from 'element-plus';
 import { useAuthStore } from '@/stores/auth';
 import router from '@/router';
+import { classifyError } from '@/utils/error';
 import type { PageResponse } from '@lm-unity/shared';
 
 // baseURL 优先级: VITE_API_BASE > BASE_URL+'/api' > '/api'
@@ -29,24 +30,26 @@ instance.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 
 // ============ 响应拦截器 ============
 // 成功:返回 res.data(响应体)
-// 失败:统一处理错误,弹 toast,401 跳登录
+// 失败:按错误分类处理
+//  - unauthorized (401): 清登录态 + 跳登录
+//  - 其它: 弹 toast(由调用方按业务 code 再分支,如 LEAD_NOT_FOUND)
 instance.interceptors.response.use(
   (res) => res.data,
   (err) => {
-    const status = err.response?.status as number | undefined;
-    const data = err.response?.data as { message?: string; code?: string } | undefined;
-    const message = data?.message || err.message || '请求失败';
+    const cls = classifyError(err);
 
-    if (status === 401) {
+    if (cls.kind === 'unauthorized') {
       const auth = useAuthStore();
       auth.clear();
       if (router.currentRoute.value.name !== 'login') {
         router.push({ name: 'login' });
       }
-    } else {
-      ElMessage.error(message);
+      // 401 不弹 toast,跳登录已是明确动作
+      return Promise.reject(err);
     }
 
+    // 其它错误统一 toast(ElMessage 已对 1s 内的相同消息做合并)
+    ElMessage.error(cls.message);
     return Promise.reject(err);
   },
 );

@@ -9,6 +9,12 @@ const routes: RouteRecordRaw[] = [
     meta: { public: true },
   },
   {
+    path: '/error',
+    name: 'error',
+    component: () => import('@/views/errors/ErrorPage.vue'),
+    meta: { public: true },
+  },
+  {
     path: '/',
     component: () => import('@/layouts/MainLayout.vue'),
     redirect: '/dashboard',
@@ -26,6 +32,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '线索看板' },
       },
       {
+        path: 'leads/:id',
+        name: 'lead-detail',
+        component: () => import('@/views/leads/LeadDetail.vue'),
+        meta: { title: '线索详情' },
+      },
+      {
         path: 'marketing',
         name: 'marketing',
         component: () => import('@/views/marketing/ContentList.vue'),
@@ -38,10 +50,40 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '服务产品库' },
       },
       {
+        path: 'clients',
+        name: 'clients',
+        component: () => import('@/views/clients/ClientList.vue'),
+        meta: { title: '客户中心' },
+      },
+      {
+        path: 'clients/:id',
+        name: 'client-detail',
+        component: () => import('@/views/clients/ClientDetail.vue'),
+        meta: { title: '客户详情' },
+      },
+      {
+        path: 'quotes',
+        name: 'quotes',
+        component: () => import('@/views/quotes/QuoteList.vue'),
+        meta: { title: '报价卡' },
+      },
+      {
+        path: 'quotes/create',
+        name: 'quote-create',
+        component: () => import('@/views/quotes/QuoteCreate.vue'),
+        meta: { title: '新建报价' },
+      },
+      {
         path: 'matters',
         name: 'matters',
         component: () => import('@/views/matters/MatterList.vue'),
         meta: { title: '案件看板' },
+      },
+      {
+        path: 'matters/create',
+        name: 'matter-create',
+        component: () => import('@/views/matters/MatterCreate.vue'),
+        meta: { title: '新建案件' },
       },
       {
         path: 'platform',
