@@ -32,6 +32,8 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       port: 5173,
+      // 允许通过 nginx 反向代理后的公网域名访问 dev server
+      allowedHosts: ['wxf-prod.huntercat.cn'],
       proxy: {
         // 1) 直接访问 vite 时的 API 代理
         //    http://localhost:5173/api/... → 后端
