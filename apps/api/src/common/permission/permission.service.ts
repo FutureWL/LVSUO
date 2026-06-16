@@ -2,8 +2,8 @@
  * 7 维权限校验服务
  *
  * 决策顺序(纵深防御):
- *   ① TenantScope → ② RBAC → ③ MatterScope → ④ DataLevel
- *   → ⑤ StageGate → ⑥ ABAC → ⑦ ApprovalFlow
+ *   1 TenantScope → 2 RBAC → 3 MatterScope → 4 DataLevel
+ *   → 5 StageGate → 6 ABAC → 7 ApprovalFlow
  */
 import { Injectable } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
@@ -30,8 +30,27 @@ export class PermissionService {
   constructor(private readonly prisma: PrismaClient) {}
 
   async check(input: PermissionCheckInput): Promise<PermissionCheckResult> {
+    // 平台超管享有 wildcard 权限（跨租户、跨案件）
+    if (this.isPlatformRole(input.user.role)) {
+      // 平台角色在 L6 密级数据上仍受限制（防止 AI 侧泄）
+      if (input.dataLevel === DataLevel.L6_AI_RESTRICTED) {
+        return {
+          allowed: false,
+          reason: '平台角色亦不得访问 L6 AI 限制数据',
+        };
+      }
+      return { allowed: true };
+    }
+
+    // ② RBAC: 平台前缀动作仅限平台角色
+    if (input.action.startsWith('platform:') && !this.isPlatformRole(input.user.role)) {
+      return {
+        allowed: false,
+        reason: `动作 ${input.action} 仅限平台角色`,
+      };
+    }
+
     // ① TenantScope:已在 TenantGuard 校验,此处仅记录
-    // ② RBAC: 角色 × 动作 矩阵
     const rbac = this.checkRbac(input.user.role, input.action);
     if (!rbac.allowed) return rbac;
 
@@ -51,7 +70,12 @@ export class PermissionService {
     return { allowed: true };
   }
 
-  /** ② RBAC 角色 × 动作矩阵(简化版,生产应存数据库 + 缓存) */
+  /** 平台角色(超管/运营/合规/技术支持)享有跨租户通行 */
+  private isPlatformRole(role: RoleType): boolean {
+    return role.startsWith('PLATFORM_');
+  }
+
+  /** 2 RBAC 角色 × 动作矩阵(简化版,生产应存数据库 + 缓存) */
   private checkRbac(role: RoleType, action: string): PermissionCheckResult {
     // 律师交付主体角色
     const lawyerRoles: RoleType[] = [
@@ -93,7 +117,7 @@ export class PermissionService {
     return { allowed: true };
   }
 
-  /** ③ MatterScope:案件归属校验 */
+  /** 3 MatterScope:案件归属校验 */
   private async checkMatterScope(
     user: JwtPayload,
     matterId: string,
@@ -124,7 +148,7 @@ export class PermissionService {
     return { allowed: true };
   }
 
-  /** ④ DataLevel 数据密级校验(5.2 矩阵的简化版) */
+  /** 4 DataLevel 数据密级校验(5.2 矩阵的简化版) */
   private checkDataLevel(role: RoleType, required: DataLevel): PermissionCheckResult {
     const maxLevel = this.maxDataLevelForRole(role);
     if (DATA_LEVEL_RANK[required] > DATA_LEVEL_RANK[maxLevel]) {

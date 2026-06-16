@@ -10,6 +10,7 @@ import { HealthModule } from './common/health/health.module';
 
 import { AuthModule } from './modules/auth/auth.module';
 import { UserModule } from './modules/user/user.module';
+import { TenantsModule } from './modules/tenant/tenant.module';
 import { LeadModule } from './modules/lead/lead.module';
 import { ProductModule } from './modules/product/product.module';
 import { QuoteModule } from './modules/quote/quote.module';
@@ -42,6 +43,7 @@ import { GlobalExceptionFilter } from './common/filter/global-exception.filter';
     // 业务模块
     AuthModule,
     UserModule,
+    TenantsModule,
     LeadModule,
     ProductModule,
     QuoteModule,

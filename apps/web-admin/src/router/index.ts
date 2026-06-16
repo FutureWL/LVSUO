@@ -43,6 +43,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/matters/MatterList.vue'),
         meta: { title: '案件看板' },
       },
+      {
+        path: 'platform',
+        name: 'platform',
+        component: () => import('@/views/platform/PlatformConsole.vue'),
+        meta: { title: '平台控制台', requiresPlatform: true },
+      },
     ],
   },
 ];
@@ -59,6 +65,10 @@ router.beforeEach((to, _from, next) => {
   if (to.meta.public) return next();
   if (!auth.isAuthenticated) {
     return next({ name: 'login', query: { redirect: to.fullPath } });
+  }
+  // 平台角色才能进入的路由
+  if (to.meta.requiresPlatform && !auth.user?.role?.startsWith('PLATFORM_')) {
+    return next({ name: 'dashboard' });
   }
   next();
 });
