@@ -54,7 +54,7 @@ const routes: RouteRecordRaw[] = [
 ];
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory(import.meta.env.BASE_URL),
   routes,
 });
 
@@ -64,7 +64,13 @@ router.beforeEach((to, _from, next) => {
   auth.rehydrate();
   if (to.meta.public) return next();
   if (!auth.isAuthenticated) {
-    return next({ name: 'login', query: { redirect: to.fullPath } });
+    // 跳转目标去掉 /lvsuo/ base，避免登录成功后 router.push 把 base 再拼一次
+    const base = import.meta.env.BASE_URL || '/';
+    const redirect =
+      base !== '/' && to.fullPath.startsWith(base)
+        ? to.fullPath.slice(base.length - 1)
+        : to.fullPath;
+    return next({ name: 'login', query: { redirect } });
   }
   // 平台角色才能进入的路由
   if (to.meta.requiresPlatform && !auth.user?.role?.startsWith('PLATFORM_')) {
