@@ -4,12 +4,17 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
+import { assertRequiredEnv } from './common/config/required-env';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
 
   // Config
   const config = app.get(ConfigService);
+
+  // 启动前校验关键环境变量,缺了直接抛错(不进入 listen)
+  assertRequiredEnv(config);
+
   const port = config.get<number>('APP_PORT', 3000);
   const prefix = config.get<string>('APP_GLOBAL_PREFIX', 'api/counsel/v1');
   const origins = config
