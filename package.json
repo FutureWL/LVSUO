@@ -33,7 +33,6 @@
   },
   "lint-staged": {
     "*.{ts,tsx,vue,js}": [
-      "eslint --fix",
       "prettier --write"
     ],
     "*.{json,md}": [
