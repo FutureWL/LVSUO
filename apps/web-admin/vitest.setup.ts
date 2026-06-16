@@ -82,4 +82,14 @@ vi.mock('element-plus', () => ({
   ElAside: Stub,
   ElMain: Stub,
   ElContainer: Stub,
+  // ElMessage 不是组件,是一个对象有 .error/.success/.warning/.info 方法
+  ElMessage: {
+    error: () => {},
+    success: () => {},
+    warning: () => {},
+    info: () => {},
+    closeAll: () => {},
+  },
+  ElMessageBox: {},
+  ElNotification: { error: () => {}, success: () => {}, warning: () => {}, info: () => {} },
 }));
