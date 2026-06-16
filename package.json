@@ -1,0 +1,37 @@
+{
+  "name": "lm-unity-counsel",
+  "version": "0.1.0",
+  "private": true,
+  "description": "LM Unity · Counsel + 律时 - 法律服务组织能力系统",
+  "packageManager": "pnpm@9.0.0",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck",
+    "clean": "turbo run clean && rm -rf node_modules",
+    "format": "prettier --write \"**/*.{ts,tsx,vue,js,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,vue,js,json,md}\"",
+    "prisma:generate": "pnpm --filter @lm-unity/api prisma:generate",
+    "prisma:migrate": "pnpm --filter @lm-unity/api prisma:migrate",
+    "prisma:studio": "pnpm --filter @lm-unity/api prisma:studio"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.0.0",
+    "@commitlint/config-conventional": "^19.0.0",
+    "husky": "^9.0.0",
+    "lint-staged": "^15.0.0",
+    "prettier": "^3.3.0",
+    "turbo": "^2.0.0",
+    "typescript": "^5.4.0"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,vue,js}": ["eslint --fix", "prettier --write"],
+    "*.{json,md}": ["prettier --write"]
+  }
+}

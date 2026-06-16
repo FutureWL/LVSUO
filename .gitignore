@@ -1,71 +1,63 @@
-# ============ Node / Frontend ============
+# ============ Dependencies ============
 node_modules/
+.pnpm-store/
+
+# ============ Build outputs ============
 dist/
 build/
 .next/
 .nuxt/
 .vite/
 .cache/
+.turbo/
+*.tsbuildinfo
+
+# ============ Test / Coverage ============
 coverage/
+.nyc_output/
+*.lcov
+
+# ============ Env & Secrets ============
+.env
+.env.local
+.env.*.local
+!.env.example
+*.pem
+*.key
+secrets.yaml
+
+# ============ Logs ============
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-.pnpm-store/
 
-# ============ Java / Backend ============
-target/
-*.jar
-*.war
-*.class
-*.iml
-.idea/
-*.iws
-*.ipr
-.gradle/
-build/
-
-# ============ Python ============
-__pycache__/
-*.py[cod]
-*$py.class
-.venv/
-venv/
-env/
-*.egg-info/
-
-# ============ Go ============
-*.exe
-*.dll
-*.so
-*.dylib
-
-# ============ 环境与密钥 ============
-.env
-.env.local
-.env.*.local
-*.pem
-*.key
-secrets.yaml
-
-# ============ 系统与编辑器 ============
+# ============ IDE / OS ============
 .DS_Store
 Thumbs.db
 .vscode/
+!.vscode/settings.json.example
+.idea/
 *.swp
 *.swo
 *~
 
-# ============ 日志与临时文件 ============
-logs/
-*.log
+# ============ Temp / Uploads ============
 tmp/
 temp/
-
-# ============ 上传与依赖文件 ============
 uploads/
 storage/
-*.sql
 *.sqlite
 *.db
+
+# ============ Prisma ============
+apps/api/prisma/migrations/dev.db*
+
+# ============ Frontend (Vue 3 / Vite) ============
+apps/*/dist/
+apps/*/.vite/
+
+# ============ Backend (NestJS) ============
+apps/api/coverage/

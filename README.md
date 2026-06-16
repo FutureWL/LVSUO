@@ -1,63 +1,150 @@
-# LM Unity · Counsel · 智法云枢 · 律师工作台
+# LM Unity · Counsel · 智法云枢
 
 > 面向律师事务所与独立律师的 **合规增长 + AI 办案 + 客户成功 + 知识沉淀** 一体化平台
-> 数字人: **律时**
+> 数字人: **律时** · 任务书 **V3.0** · 仓库: `ssh://git@localhost:2222/FutureWL/LVSUO.git`
 
-[![Version](https://img.shields.io/badge/version-V3.0-blue.svg)](docs/00-产品定义/开发任务书V3.0.md)
-[![Status](https://img.shields.io/badge/status-active-success.svg)]()
+[![Status](https://img.shields.io/badge/status-MVP%20scaffolding-blue.svg)]()
+[![Tasks](https://img.shields.io/badge/任务书%20V3.0-19%20章%20✅-success.svg)](./docs/00-产品定义/开发任务书V3.0.md)
+[![Stack](https://img.shields.io/badge/stack-NestJS%20%2B%20Vue3%20%2B%20Prisma-orange.svg)]()
 
-## 产品定位
+---
 
-LM Unity · Counsel(智法云枢)以数字人 **律时** 为统一交互入口,围绕 **五大子系统** 打造律师 / 律所的端到端数字工作平台:
-
-| # | 子系统 | 核心能力 |
-|---|--------|----------|
-| 1 | **AI 智能工作平台** | 律时数字人 · 智能问答 · 文书生成 · 案例检索 · 合同审查 · 法规查询 |
-| 2 | **合规增长中台** | 市场获客 · 内容运营 · 客户旅程 · 私域转化 · 营销合规审查 |
-| 3 | **客户成功系统** | 客户全生命周期 · 满意度回访 · 服务报告 · 续约增购 |
-| 4 | **案件办理操作系统** | 立案 · 协同 · 工时计费 · 文档证据链 · 庭审辅助 · 合规留痕 |
-| 5 | **知识经验沉淀系统** | 知识库 · 案例库 · 文书模板 · 判例库 · 专家图谱 |
-
-## 目标用户
-
-- 大型 / 综合性律师事务所
-- 中小型 / 精品律所
-- 独立律师 / 律师工作室
-
-## 仓库信息
-
-- **仓库地址**:`ssh://git@localhost:2222/FutureWL/LVSUO.git`
-- **当前版本**:V3.0
-- **代码管理**:Git Flow,`main` 为受保护分支
-
-## 目录结构
+## 仓库结构(Monorepo)
 
 ```
 LVSUO/
-├── README.md                       # 本文件 · 项目门户首页
-├── .gitignore
-├── docs/
-│   ├── 00-产品定义/                # 产品定位、任务书、用户画像、竞品
-│   ├── 10-架构设计/                # 系统架构、技术选型、数据流
-│   ├── 20-功能模块/                # 五大子系统详细功能
-│   └── 30-交付与运维/              # CI/CD、监控、运维手册
-├── frontend/                       # 前端应用
-├── backend/                        # 后端服务
-└── deploy/                         # 部署配置
+├── packages/
+│   └── shared/              # 共享 TS 类型 / 枚举 / 常量(任务书 V3.0 第 4-8 章沉淀)
+├── apps/
+│   ├── api/                 # NestJS 后端 API(MVP 主战场)
+│   ├── web-admin/           # 律所管理端(Vue 3)
+│   ├── web-lawyer/          # 律师端(Vue 3)         — 脚手架待建
+│   ├── web-solo/            # 独立律师端(Vue 3)     — 脚手架待建
+│   └── web-client/          # 客户端(uni-app)       — 脚手架待建
+├── infra/                   # Docker Compose(PostgreSQL / Redis / MinIO)
+├── docs/                    # 任务书 V3.0(19 章完整)
+├── package.json             # 根 package.json
+├── pnpm-workspace.yaml      # pnpm workspace 配置
+├── turbo.json               # Turborepo 配置
+├── tsconfig.base.json       # TS 基础配置
+└── [root configs]           # .gitignore .editorconfig .prettierrc.json
 ```
+
+## 技术栈
+
+| 层 | 选型 |
+|----|------|
+| 包管理 | pnpm + Turborepo |
+| 后端 | NestJS 10 + TypeScript + Prisma 5 |
+| 前端 | Vue 3 + Vite + TypeScript + Element Plus + Pinia |
+| 客户端 | uni-app(待启动) |
+| 数据库 | PostgreSQL 16 + Redis 7 + MinIO |
+| 鉴权 | JWT + 自研 7 维权限(任务书 5.1) |
+| 状态机 | XState(待引入) |
+| AI | 公有云大模型(Qwen / DeepSeek,可切换) |
+| 部署 | Docker Compose(本地)→ K8s(三期) |
+| 日志 | Pino |
+| 测试 | Jest(后端)+ Vitest(前端) |
+
+## 快速启动(开发者)
+
+### 前置条件
+
+- **Node.js** ≥ 20
+- **pnpm** ≥ 9 (`npm install -g pnpm`)
+- **Docker** + Docker Compose
+
+### 启动顺序
+
+```bash
+# 1. 克隆与安装
+git clone ssh://git@localhost:2222/FutureWL/LVSUO.git
+cd LVSUO
+pnpm install
+
+# 2. 启动基础设施
+cd infra && docker compose up -d && cd ..
+
+# 3. 配置后端环境变量
+cp apps/api/.env.example apps/api/.env
+# 编辑 .env 填入 JWT_SECRET、API keys 等
+
+# 4. 数据库迁移
+pnpm prisma:migrate
+
+# 5. 启动开发服务(monorepo 根目录)
+pnpm dev
+```
+
+访问:
+- **律所管理端**: http://localhost:5173
+- **API 服务**: http://localhost:3000
+- **Swagger 文档**: http://localhost:3000/api/counsel/v1/docs
+- **Prisma Studio**: 通过 `pnpm prisma:studio` 启动
+- **MinIO Console**: http://localhost:9001(minioadmin / minioadmin)
+
+## 任务书 V3.0 落地进度
+
+| 章节 | 标题 | 状态 | 落地位置 |
+|------|------|------|----------|
+| 第 1 章 | 总体判断与设计原则 | ✅ | `docs/00-产品定义/01-` |
+| 第 2 章 | 规则·商业·技术三重定位 | ✅ | `docs/00-产品定义/02-` |
+| 第 3 章 | 产品总架构 | ✅ | `docs/00-产品定义/03-` |
+| 第 4 章 | 用户角色体系(5 类 33 角色) | ✅ | `packages/shared` `RoleType` |
+| 第 5 章 | 权限模型(7 维 + 6 密级) | ✅ | `apps/api/src/common/permission/` |
+| 第 6 章 | 核心业务状态机(4 大) | ✅ | `packages/shared` 状态枚举 + `matter.service.ts` `transition` |
+| 第 7 章 | 核心模块开发任务(10 大) | 🟡 | 部分落地(lead / product / quote / matter / time-entry / knowledge-card) |
+| 第 8 章 | 数据库设计(15 张表) | ✅ | `apps/api/prisma/schema.prisma` |
+| 第 9 章 | API 接口设计(6 大) | 🟡 | 部分端点(后续 PR 补全) |
+| 第 10 章 | AI 系统设计 | 🟡 | L6 守卫(其他 AI 能力待二期) |
+| 第 11 章 | 前端页面清单 | 🟡 | web-admin 5 个页面 / 其他端待建 |
+| 第 12 章 | 商业指标与运营看板 | 🟡 | Dashboard 占位,具体指标待接 |
+| 第 13 章 | 安全、合规与审计 | 🟡 | 审计日志中间件 + AuditLog 表 |
+| 第 14 章 | MVP(19 项) | 🟡 12/19 | 见下方进度 |
+| 第 15-19 章 | 二/三期 / 验收 / 交付 / 判断 | ✅ | `docs/00-产品定义/` |
+
+### MVP 14.2 19 项进度(12/19)
+
+| # | 能力 | 状态 | 落地位置 |
+|---|------|------|----------|
+| 1 | 多租户与用户权限 | ✅ | `apps/api/src/modules/auth/` + `user/` |
+| 2 | 客户中心 | 🟡 | `clients` 表 + 后续补 UI |
+| 3 | 推广内容合规审查 | 🟡 | `marketing_contents` 表 + `redline-words` 常量 |
+| 4 | 线索管理 | ✅ | `apps/api/src/modules/lead/` |
+| 5 | 律时初步接待 | 🟡 | `LushiRole.COMPLIANCE_FRONT` + 框架 |
+| 6 | 结构化分诊 | 🟡 | `intake_triages` 表 |
+| 7 | 服务产品库 | ✅ | `apps/api/src/modules/product/` |
+| 8 | 报价卡 | ✅ | `apps/api/src/modules/quote/` + 10.4 阻断规则 |
+| 9 | 风险揭示 | 🟡 | `risk-disclosure-templates` 常量 + UI 待建 |
+| 10 | 委托签约记录 | 🟡 | `engagements` 待建(quote 中部分) |
+| 11 | 案件作战室 | 🟡 | `matter` 基础 + 9 本账待建 |
+| 12 | 任务看板 | ⏳ | 待二期 |
+| 13 | 律时语音计时 | ✅ | `apps/api/src/modules/time-entry/` |
+| 14 | 客户门户基础版 | ⏳ | 待 web-client 启动 |
+| 15 | 客户周报 | ⏳ | 待二期 |
+| 16 | 质检记录 | 🟡 | `service_quality_checks` 表 + 框架 |
+| 17 | 结案复盘 | ⏳ | 待二期 |
+| 18 | 知识卡片 | ✅ | `apps/api/src/modules/knowledge-card/` |
+| 19 | 操作日志 | ✅ | `apps/api/src/common/audit/` + `AuditLog` 表 |
 
 ## 文档导航
 
-- 📘 [开发任务书 V3.0](docs/00-产品定义/开发任务书V3.0.md)
-- 📗 [项目概述](docs/00-产品定义/项目概述.md)
+- 📘 [任务书 V3.0 封面 + 完整目录](./docs/00-产品定义/开发任务书V3.0.md)
+- 📗 [第 1 章 总体判断与设计原则](./docs/00-产品定义/01-总体判断与设计原则.md)
+- 📙 [第 5 章 权限模型(7 维 + 6 密级)](./docs/00-产品定义/05-权限模型.md)
+- 📒 [第 6 章 核心业务状态机(4 大)](./docs/00-产品定义/06-核心业务状态机.md)
+- 📕 [第 7 章 核心模块开发任务(10 大)](./docs/00-产品定义/07-核心模块开发任务.md)
+- 📓 [第 8 章 数据库设计(15 张表)](./docs/00-产品定义/08-数据库设计.md)
+- 📔 [后端 API README](./apps/api/README.md)
+- 📄 [律所管理端 README](./apps/web-admin/README.md)
+- ⚙️ [本地基础设施 README](./infra/README.md)
 
-## 协作流程
+## 战略使命
 
-1. 从 `main` 拉取功能分支:`git checkout -b feature/<name>`
-2. 提交并推送:`git push origin feature/<name>`
-3. 创建 Merge Request 进行代码评审
-4. 合并后自动部署到测试环境
+> 把律师的专业能力 **产品化**,把律所的组织能力 **系统化**,把客户的真实需求 **结构化**,
+> 把增长行为 **合规化**,把案件交付质量 **可视化**,把无形经验 **资产化**。
+> 这才是 LM Unity · Counsel + 律时 在未来律师行业中的真正价值。
 
-## 许可证
+---
 
-内部使用 · © FutureWL 律师事务所 · LM Unity · Counsel
+**内部使用** · © FutureWL 律师事务所 · [任务书 V3.0](./docs/00-产品定义/开发任务书V3.0.md)

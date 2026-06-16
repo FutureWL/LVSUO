@@ -1,0 +1,79 @@
+# LM Unity · Counsel · 本地开发基础设施
+# 用法: cd infra && docker compose up -d
+#
+# 包含服务:
+#   - postgres: 主数据库(任务书第 8 章 15 张表)
+#   - redis:   缓存 / 会话
+#   - minio:   对象存储(任务书附件 / 案件文档)
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: lmsuo-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: lmsuo
+    ports:
+      - "5432:5432"
+    volumes:
+      - lmsuo-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d lmsuo"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: lmsuo-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - lmsuo-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    container_name: lmsuo-minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"   # API
+      - "9001:9001"   # Console
+    volumes:
+      - lmsuo-minio-data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio-bucket-init:
+    image: minio/mc:latest
+    container_name: lmsuo-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 minioadmin minioadmin &&
+      mc mb -p local/lmsuo || true &&
+      mc anonymous set download local/lmsuo || true &&
+      echo 'MinIO bucket lmsuo ready'
+      "
+    restart: "no"
+
+volumes:
+  lmsuo-postgres-data:
+  lmsuo-redis-data:
+  lmsuo-minio-data:

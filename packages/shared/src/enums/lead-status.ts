@@ -1,0 +1,36 @@
+/** 任务书 6.2 线索生命周期状态机 */
+export enum LeadStatus {
+  NEW_LEAD = 'NEW_LEAD',
+  CONSENT_COLLECTED = 'CONSENT_COLLECTED',
+  LUSHI_INTAKE = 'LUSHI_INTAKE',
+  TRIAGE_PENDING = 'TRIAGE_PENDING',
+  TRIAGED = 'TRIAGED',
+  LAWYER_REVIEW_REQUIRED = 'LAWYER_REVIEW_REQUIRED',
+  PRODUCT_RECOMMENDED = 'PRODUCT_RECOMMENDED',
+  QUOTE_PENDING = 'QUOTE_PENDING',
+  QUOTE_SENT = 'QUOTE_SENT',
+  RISK_DISCLOSURE_CONFIRMED = 'RISK_DISCLOSURE_CONFIRMED',
+  ENGAGEMENT_PENDING = 'ENGAGEMENT_PENDING',
+  CONVERTED_TO_MATTER = 'CONVERTED_TO_MATTER',
+  UNSUITABLE = 'UNSUITABLE',
+  CLOSED_LOST = 'CLOSED_LOST',
+  ARCHIVED = 'ARCHIVED',
+}
+
+export const LEAD_STATUS_NAME: Record<LeadStatus, string> = {
+  [LeadStatus.NEW_LEAD]: '新线索',
+  [LeadStatus.CONSENT_COLLECTED]: '已取得隐私授权',
+  [LeadStatus.LUSHI_INTAKE]: '律时初步接待',
+  [LeadStatus.TRIAGE_PENDING]: '待分诊',
+  [LeadStatus.TRIAGED]: '已分诊',
+  [LeadStatus.LAWYER_REVIEW_REQUIRED]: '需律师确认',
+  [LeadStatus.PRODUCT_RECOMMENDED]: '已推荐服务产品',
+  [LeadStatus.QUOTE_PENDING]: '待报价',
+  [LeadStatus.QUOTE_SENT]: '已发送报价',
+  [LeadStatus.RISK_DISCLOSURE_CONFIRMED]: '已确认风险揭示',
+  [LeadStatus.ENGAGEMENT_PENDING]: '待签约',
+  [LeadStatus.CONVERTED_TO_MATTER]: '已转案件',
+  [LeadStatus.UNSUITABLE]: '不适合承接',
+  [LeadStatus.CLOSED_LOST]: '未转化',
+  [LeadStatus.ARCHIVED]: '已归档',
+};
