@@ -1,16 +1,12 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, Logger } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
-import { Logger } from 'nestjs-pino';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
-
-  // Logger (Pino)
-  app.useLogger(app.get(Logger));
 
   // Config
   const config = app.get(ConfigService);
@@ -62,7 +58,7 @@ async function bootstrap() {
   }
 
   await app.listen(port);
-  const logger = app.get(Logger);
+  const logger = new Logger('Bootstrap');
   logger.log(`🚀 LM Unity API running on http://localhost:${port}/${prefix}`);
   logger.log(`📚 Swagger docs at  http://localhost:${port}/${prefix}/docs`);
 }

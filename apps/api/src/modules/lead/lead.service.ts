@@ -6,7 +6,7 @@ import { Lead, LeadStatus, CreateLeadInput } from '@lm-unity/shared';
 export class LeadService {
   constructor(private readonly prisma: PrismaClient) {}
 
-  async create(tenantId: string, input: CreateLeadInput) {
+  async create(tenantId: string, input: Omit<CreateLeadInput, 'tenantId'>) {
     return this.prisma.lead.create({
       data: {
         tenantId,

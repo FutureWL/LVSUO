@@ -3,16 +3,30 @@
   "version": "0.1.0",
   "private": true,
   "description": "LM Unity · Counsel 共享类型 / 枚举 / 常量(基于任务书 V3.0)",
-  "type": "module",
-  "main": "./src/index.ts",
-  "types": "./src/index.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "type": "commonjs",
   "exports": {
-    ".": "./src/index.ts",
-    "./types": "./src/types/index.ts",
-    "./enums": "./src/enums/index.ts",
-    "./constants": "./src/constants/index.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    },
+    "./types": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/types/index.js"
+    },
+    "./enums": {
+      "types": "./dist/enums/index.d.ts",
+      "import": "./dist/enums/index.js"
+    },
+    "./constants": {
+      "types": "./dist/constants/index.d.ts",
+      "import": "./dist/constants/index.js"
+    }
   },
   "scripts": {
+    "build": "tsc -b",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --max-warnings=0",
     "clean": "rm -rf dist .turbo"

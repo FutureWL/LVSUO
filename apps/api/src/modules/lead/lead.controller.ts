@@ -4,7 +4,7 @@ import { IsString, IsOptional, IsIn } from 'class-validator';
 import { LeadService } from './lead.service';
 import { RequirePerm } from '../../common/permission/permission.decorator';
 import { CurrentUser } from '../../common/auth/current-user.decorator';
-import type { JwtPayload } from '@lm-unity/shared';
+import type { JwtPayload, UrgencyLevel } from '@lm-unity/shared';
 import { Audit } from '../../common/audit/audit.decorator';
 
 class CreateLeadDto {
@@ -13,7 +13,8 @@ class CreateLeadDto {
   @IsOptional() @IsString() contactMobile?: string;
   @IsOptional() @IsString() contactEmail?: string;
   @IsOptional() @IsString() legalIssueType?: string;
-  @IsOptional() @IsIn(['LOW', 'MEDIUM', 'HIGH', 'URGENT']) urgencyLevel?: string;
+  @IsOptional() @IsIn(['LOW', 'MEDIUM', 'HIGH', 'URGENT'])
+  urgencyLevel?: UrgencyLevel;
 }
 
 @ApiTags('lead')

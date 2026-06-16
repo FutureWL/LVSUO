@@ -1,6 +1,5 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
-import { PinoLogger } from 'nestjs-pino';
 import { DataLevel, DATA_LEVEL_RANK } from '@lm-unity/shared';
 
 export interface AuditEntry {
@@ -20,19 +19,19 @@ export interface AuditEntry {
 
 @Injectable()
 export class AuditService {
-  constructor(
-    private readonly prisma: PrismaClient,
-    private readonly logger: PinoLogger,
-  ) {
-    this.logger.setContext(AuditService.name);
-  }
+  private readonly logger = new Logger(AuditService.name);
+
+  constructor(private readonly prisma: PrismaClient) {}
 
   async record(entry: AuditEntry): Promise<void> {
     // L4 及以上告警
-    if (entry.dataLevel && DATA_LEVEL_RANK[entry.dataLevel] >= DATA_LEVEL_RANK[DataLevel.L4_CLIENT_CONFIDENTIAL]) {
+    if (
+      entry.dataLevel &&
+      DATA_LEVEL_RANK[entry.dataLevel] >=
+        DATA_LEVEL_RANK[DataLevel.L4_CLIENT_CONFIDENTIAL]
+    ) {
       this.logger.warn(
-        { action: entry.action, dataLevel: entry.dataLevel, tenantId: entry.tenantId },
-        '⚠️  敏感数据访问(L4+)',
+        `⚠️  敏感数据访问(L4+): action=${entry.action} level=${entry.dataLevel} tenant=${entry.tenantId}`,
       );
     }
 

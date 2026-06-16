@@ -1,5 +1,6 @@
 export * from './tenant.js';
 export * from './user.js';
+export * from './service-product.js';
 export * from './marketing-account.js';
 export * from './marketing-content.js';
 export * from './lead.js';

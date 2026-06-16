@@ -6,7 +6,7 @@ import { MatterStatus, MATTER_STATUS_TRANSITIONS, CreateMatterInput } from '@lm-
 export class MatterService {
   constructor(private readonly prisma: PrismaClient) {}
 
-  async create(tenantId: string, input: CreateMatterInput) {
+  async create(tenantId: string, input: Omit<CreateMatterInput, 'tenantId'>) {
     const year = new Date().getFullYear();
     const count = await this.prisma.matter.count({
       where: { tenantId, createdAt: { gte: new Date(`${year}-01-01`) } },

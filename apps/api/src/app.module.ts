@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD, APP_PIPE, APP_FILTER } from '@nestjs/core';
-import { LoggerModule } from 'nestjs-pino';
 
 import { PrismaModule } from './common/prisma/prisma.module';
 import { TenantModule } from './common/tenant/tenant.module';
@@ -31,20 +30,6 @@ import { GlobalExceptionFilter } from './common/filter/global-exception.filter';
     ConfigModule.forRoot({
       isGlobal: true,
       cache: true,
-    }),
-
-    // 日志
-    LoggerModule.forRootAsync({
-      useFactory: () => ({
-        pinoHttp: {
-          level: process.env.LOG_LEVEL || 'info',
-          transport:
-            process.env.NODE_ENV !== 'production' && process.env.LOG_PRETTY === 'true'
-              ? { target: 'pino-pretty', options: { singleLine: true, colorize: true } }
-              : undefined,
-          redact: ['req.headers.authorization', 'req.body.password'],
-        },
-      }),
     }),
 
     // 基础设施

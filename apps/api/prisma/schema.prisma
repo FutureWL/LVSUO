@@ -16,26 +16,27 @@ datasource db {
 // 8.1 租户表 tenants
 // =====================================================================
 model Tenant {
-  id              String   @id @default(cuid())
-  tenantName      String   @map("tenant_name") @db.VarChar(255)
-  tenantType      String   @map("tenant_type") @db.VarChar(50) // FIRM / SOLO / TEAM / SUPPORT_ORG
-  deploymentMode  String   @map("deployment_mode") @db.VarChar(50) // SAAS / PRIVATE / PERSONAL
-  status          String   @default("ACTIVE") @db.VarChar(50)
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  id             String   @id @default(cuid())
+  tenantName     String   @map("tenant_name") @db.VarChar(255)
+  tenantType     String   @map("tenant_type") @db.VarChar(50) // FIRM / SOLO / TEAM / SUPPORT_ORG
+  deploymentMode String   @map("deployment_mode") @db.VarChar(50) // SAAS / PRIVATE / PERSONAL
+  status         String   @default("ACTIVE") @db.VarChar(50)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
-  users               User[]
-  marketingAccounts   MarketingAccount[]
-  marketingContents   MarketingContent[]
-  leads               Lead[]
-  serviceProducts     ServiceProduct[]
-  feeQuotes           FeeQuote[]
-  clients             Client[]
-  matters             Matter[]
-  lushiConversations  LushiConversation[]
-  timeEntries         TimeEntry[]
-  qualityChecks       ServiceQualityCheck[]
-  knowledgeCards      KnowledgeCard[]
+  users              User[]
+  marketingAccounts  MarketingAccount[]
+  marketingContents  MarketingContent[]
+  leads              Lead[]
+  serviceProducts    ServiceProduct[]
+  feeQuotes          FeeQuote[]
+  clients            Client[]
+  matters            Matter[]
+  lushiConversations LushiConversation[]
+  timeEntries        TimeEntry[]
+  qualityChecks      ServiceQualityCheck[]
+  knowledgeCards     KnowledgeCard[]
+  IntakeTriage       IntakeTriage[]
 
   @@index([tenantType])
   @@index([status])
@@ -46,30 +47,30 @@ model Tenant {
 // 8.2 用户表 users
 // =====================================================================
 model User {
-  id              String   @id @default(cuid())
-  tenantId        String   @map("tenant_id")
-  username        String   @db.VarChar(100)
-  mobile          String?  @db.VarChar(50)
-  email           String?  @db.VarChar(100)
-  passwordHash    String   @map("password_hash") @db.VarChar(255)
-  realName        String   @map("real_name") @db.VarChar(100)
-  roleType        String   @map("role_type") @db.VarChar(100) // 33 角色代码
-  licenseNo       String?  @map("license_no") @db.VarChar(100)
-  userStatus      String   @default("ACTIVE") @map("user_status") @db.VarChar(50)
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  id           String   @id @default(cuid())
+  tenantId     String   @map("tenant_id")
+  username     String   @db.VarChar(100)
+  mobile       String?  @db.VarChar(50)
+  email        String?  @db.VarChar(100)
+  passwordHash String   @map("password_hash") @db.VarChar(255)
+  realName     String   @map("real_name") @db.VarChar(100)
+  roleType     String   @map("role_type") @db.VarChar(100) // 33 角色代码
+  licenseNo    String?  @map("license_no") @db.VarChar(100)
+  userStatus   String   @default("ACTIVE") @map("user_status") @db.VarChar(50)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
-  tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  ownedAccounts  MarketingAccount[] @relation("AccountOwner")
-  ledContents    MarketingContent[] @relation("ContentCreator")
-  assignedLeads  Lead[]
-  ledMatters     Matter[]        @relation("LeadLawyer")
-  partneredMatters Matter[]      @relation("ResponsiblePartner")
-  timeEntries    TimeEntry[]
-  reviewedEntries TimeEntry[]    @relation("EntryReviewer")
-  reviewedChecks ServiceQualityCheck[]
-  createdCards   KnowledgeCard[]
-  reviewedCards  KnowledgeCard[]
+  tenant           Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ownedAccounts    MarketingAccount[]    @relation("AccountOwner")
+  ledContents      MarketingContent[]    @relation("ContentCreator")
+  assignedLeads    Lead[]
+  ledMatters       Matter[]              @relation("LeadLawyer")
+  partneredMatters Matter[]              @relation("ResponsiblePartner")
+  timeEntries      TimeEntry[]
+  reviewedEntries  TimeEntry[]           @relation("EntryReviewer")
+  reviewedChecks   ServiceQualityCheck[]
+  createdCards     KnowledgeCard[]       @relation("CardCreator")
+  reviewedCards    KnowledgeCard[]       @relation("CardReviewer")
 
   @@unique([tenantId, username])
   @@unique([tenantId, mobile])
@@ -82,24 +83,24 @@ model User {
 // 8.3 推广账号表 marketing_accounts
 // =====================================================================
 model MarketingAccount {
-  id                      String   @id @default(cuid())
-  tenantId                String   @map("tenant_id")
-  platform                String   @db.VarChar(100)
-  accountName             String   @map("account_name") @db.VarChar(255)
-  accountId               String   @map("account_id") @db.VarChar(255)
-  ownerType               String   @map("owner_type") @db.VarChar(50) // FIRM / LAWYER / TEAM / THIRD_PARTY
-  ownerUserId             String?  @map("owner_user_id")
-  responsibleLawyerId     String?  @map("responsible_lawyer_id")
-  operatedByThirdParty    Boolean  @default(false) @map("operated_by_third_party")
-  thirdPartyName          String?  @map("third_party_name") @db.VarChar(255)
-  filingStatus            String   @default("UNFILED") @map("filing_status") @db.VarChar(50)
-  riskLevel               String   @default("LOW") @map("risk_level") @db.VarChar(50)
-  status                  String   @default("ACTIVE") @db.VarChar(50)
-  createdAt               DateTime @default(now()) @map("created_at")
-  updatedAt               DateTime @updatedAt @map("updated_at")
+  id                   String   @id @default(cuid())
+  tenantId             String   @map("tenant_id")
+  platform             String   @db.VarChar(100)
+  accountName          String   @map("account_name") @db.VarChar(255)
+  accountId            String   @map("account_id") @db.VarChar(255)
+  ownerType            String   @map("owner_type") @db.VarChar(50) // FIRM / LAWYER / TEAM / THIRD_PARTY
+  ownerUserId          String?  @map("owner_user_id")
+  responsibleLawyerId  String?  @map("responsible_lawyer_id")
+  operatedByThirdParty Boolean  @default(false) @map("operated_by_third_party")
+  thirdPartyName       String?  @map("third_party_name") @db.VarChar(255)
+  filingStatus         String   @default("UNFILED") @map("filing_status") @db.VarChar(50)
+  riskLevel            String   @default("LOW") @map("risk_level") @db.VarChar(50)
+  status               String   @default("ACTIVE") @db.VarChar(50)
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
 
-  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  owner    User?    @relation("AccountOwner", fields: [ownerUserId], references: [id])
+  tenant   Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  owner    User?              @relation("AccountOwner", fields: [ownerUserId], references: [id])
   contents MarketingContent[]
 
   @@index([tenantId, platform])
@@ -111,25 +112,25 @@ model MarketingAccount {
 // 8.4 推广内容表 marketing_contents
 // =====================================================================
 model MarketingContent {
-  id              String   @id @default(cuid())
-  tenantId        String   @map("tenant_id")
-  accountId       String?  @map("account_id")
-  contentType     String   @map("content_type") @db.VarChar(50)
-  title           String   @db.VarChar(255)
-  contentText     String   @map("content_text") @db.Text
-  mediaFileId     String?  @map("media_file_id")
-  aiRiskResult    Json?    @map("ai_risk_result")
-  reviewStatus    String   @default("DRAFT") @map("review_status") @db.VarChar(50)
-  riskLevel       String   @default("LOW") @map("risk_level") @db.VarChar(50)
-  publishedUrl    String?  @map("published_url") @db.VarChar(500)
-  publishedAt     DateTime? @map("published_at")
-  createdBy       String   @map("created_by")
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  id           String    @id @default(cuid())
+  tenantId     String    @map("tenant_id")
+  accountId    String?   @map("account_id")
+  contentType  String    @map("content_type") @db.VarChar(50)
+  title        String    @db.VarChar(255)
+  contentText  String    @map("content_text") @db.Text
+  mediaFileId  String?   @map("media_file_id")
+  aiRiskResult Json?     @map("ai_risk_result")
+  reviewStatus String    @default("DRAFT") @map("review_status") @db.VarChar(50)
+  riskLevel    String    @default("LOW") @map("risk_level") @db.VarChar(50)
+  publishedUrl String?   @map("published_url") @db.VarChar(500)
+  publishedAt  DateTime? @map("published_at")
+  createdBy    String    @map("created_by")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
 
-  tenant  Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  account MarketingAccount?  @relation(fields: [accountId], references: [id])
-  creator User               @relation("ContentCreator", fields: [createdBy], references: [id])
+  tenant  Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  account MarketingAccount? @relation(fields: [accountId], references: [id])
+  creator User              @relation("ContentCreator", fields: [createdBy], references: [id])
 
   @@index([tenantId, reviewStatus])
   @@index([tenantId, contentType])
@@ -141,26 +142,26 @@ model MarketingContent {
 // 8.5 线索表 leads
 // =====================================================================
 model Lead {
-  id                     String   @id @default(cuid())
-  tenantId               String   @map("tenant_id")
-  sourceChannel          String   @map("source_channel") @db.VarChar(100)
-  sourceAccountId        String?  @map("source_account_id")
-  clientName             String   @map("client_name") @db.VarChar(255)
-  contactMobile          String?  @map("contact_mobile") @db.VarChar(50)
-  contactEmail           String?  @map("contact_email") @db.VarChar(100)
-  legalIssueType         String?  @map("legal_issue_type") @db.VarChar(100)
-  urgencyLevel           String   @default("MEDIUM") @map("urgency_level") @db.VarChar(50)
-  emotionalState         String   @default("NEUTRAL") @map("emotional_state") @db.VarChar(50)
-  intakeStatus           String   @default("NEW_LEAD") @map("intake_status") @db.VarChar(50)
-  assignedLawyerId       String?  @map("assigned_lawyer_id")
-  recommendedProductId   String?  @map("recommended_product_id")
-  createdAt              DateTime @default(now()) @map("created_at")
-  updatedAt              DateTime @updatedAt @map("updated_at")
+  id                   String   @id @default(cuid())
+  tenantId             String   @map("tenant_id")
+  sourceChannel        String   @map("source_channel") @db.VarChar(100)
+  sourceAccountId      String?  @map("source_account_id")
+  clientName           String   @map("client_name") @db.VarChar(255)
+  contactMobile        String?  @map("contact_mobile") @db.VarChar(50)
+  contactEmail         String?  @map("contact_email") @db.VarChar(100)
+  legalIssueType       String?  @map("legal_issue_type") @db.VarChar(100)
+  urgencyLevel         String   @default("MEDIUM") @map("urgency_level") @db.VarChar(50)
+  emotionalState       String   @default("NEUTRAL") @map("emotional_state") @db.VarChar(50)
+  intakeStatus         String   @default("NEW_LEAD") @map("intake_status") @db.VarChar(50)
+  assignedLawyerId     String?  @map("assigned_lawyer_id")
+  recommendedProductId String?  @map("recommended_product_id")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
 
-  tenant          Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  assignedLawyer  User?           @relation(fields: [assignedLawyerId], references: [id])
-  triages         IntakeTriage[]
-  quotes          FeeQuote[]
+  tenant         Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  assignedLawyer User?          @relation(fields: [assignedLawyerId], references: [id])
+  triages        IntakeTriage[]
+  quotes         FeeQuote[]
 
   @@index([tenantId, intakeStatus])
   @@index([tenantId, sourceChannel])
@@ -172,21 +173,21 @@ model Lead {
 // 8.6 分诊记录表 intake_triages
 // =====================================================================
 model IntakeTriage {
-  id                       String   @id @default(cuid())
-  tenantId                 String   @map("tenant_id")
-  leadId                   String   @map("lead_id")
-  factsSummary             String?  @map("facts_summary") @db.Text
-  evidenceSummary          String?  @map("evidence_summary") @db.Text
-  urgencyReason            String?  @map("urgency_reason") @db.Text
-  triageResult             String?  @map("triage_result") @db.VarChar(100)
-  recommendedProductId     String?  @map("recommended_product_id")
-  shouldTransferToLawyer   Boolean  @default(false) @map("should_transfer_to_lawyer")
-  aiGenerated              Boolean  @default(false) @map("ai_generated")
-  lawyerConfirmed          Boolean  @default(false) @map("lawyer_confirmed")
-  confirmedBy              String?  @map("confirmed_by")
-  createdAt                DateTime @default(now()) @map("created_at")
+  id                     String   @id @default(cuid())
+  tenantId               String   @map("tenant_id")
+  leadId                 String   @map("lead_id")
+  factsSummary           String?  @map("facts_summary") @db.Text
+  evidenceSummary        String?  @map("evidence_summary") @db.Text
+  urgencyReason          String?  @map("urgency_reason") @db.Text
+  triageResult           String?  @map("triage_result") @db.VarChar(100)
+  recommendedProductId   String?  @map("recommended_product_id")
+  shouldTransferToLawyer Boolean  @default(false) @map("should_transfer_to_lawyer")
+  aiGenerated            Boolean  @default(false) @map("ai_generated")
+  lawyerConfirmed        Boolean  @default(false) @map("lawyer_confirmed")
+  confirmedBy            String?  @map("confirmed_by")
+  createdAt              DateTime @default(now()) @map("created_at")
 
-  lead  Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  lead   Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, leadId])
@@ -198,27 +199,27 @@ model IntakeTriage {
 // 8.7 服务产品表 legal_service_products
 // =====================================================================
 model ServiceProduct {
-  id                          String   @id @default(cuid())
-  tenantId                    String   @map("tenant_id")
-  productName                 String   @map("product_name") @db.VarChar(255)
-  productType                 String   @map("product_type") @db.VarChar(100) // P0-P7
-  applicableScenarios         String?  @map("applicable_scenarios") @db.Text
-  excludedScenarios           String?  @map("excluded_scenarios") @db.Text
-  serviceScope                String?  @map("service_scope") @db.Text
-  excludedScope               String?  @map("excluded_scope") @db.Text
-  deliverables                String?  @db.Text
-  requiredMaterials           String?  @map("required_materials") @db.Text
-  priceType                   String?  @map("price_type") @db.VarChar(50)
-  basePrice                   Decimal? @map("base_price") @db.Decimal(18, 2)
-  deliveryDays                Int?     @map("delivery_days")
-  requiresLawyer              Boolean  @default(true) @map("requires_lawyer")
-  requiresPartnerApproval     Boolean  @default(false) @map("requires_partner_approval")
-  riskDisclosureTemplateId    String?  @map("risk_disclosure_template_id")
-  status                      String   @default("ACTIVE") @db.VarChar(50)
-  createdAt                   DateTime @default(now()) @map("created_at")
-  updatedAt                   DateTime @updatedAt @map("updated_at")
+  id                       String   @id @default(cuid())
+  tenantId                 String   @map("tenant_id")
+  productName              String   @map("product_name") @db.VarChar(255)
+  productType              String   @map("product_type") @db.VarChar(100) // P0-P7
+  applicableScenarios      String?  @map("applicable_scenarios") @db.Text
+  excludedScenarios        String?  @map("excluded_scenarios") @db.Text
+  serviceScope             String?  @map("service_scope") @db.Text
+  excludedScope            String?  @map("excluded_scope") @db.Text
+  deliverables             String?  @db.Text
+  requiredMaterials        String?  @map("required_materials") @db.Text
+  priceType                String?  @map("price_type") @db.VarChar(50)
+  basePrice                Decimal? @map("base_price") @db.Decimal(18, 2)
+  deliveryDays             Int?     @map("delivery_days")
+  requiresLawyer           Boolean  @default(true) @map("requires_lawyer")
+  requiresPartnerApproval  Boolean  @default(false) @map("requires_partner_approval")
+  riskDisclosureTemplateId String?  @map("risk_disclosure_template_id")
+  status                   String   @default("ACTIVE") @db.VarChar(50)
+  createdAt                DateTime @default(now()) @map("created_at")
+  updatedAt                DateTime @updatedAt @map("updated_at")
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   quotes FeeQuote[]
 
   @@index([tenantId, productType])
@@ -230,24 +231,24 @@ model ServiceProduct {
 // 8.8 报价卡表 fee_quotes
 // =====================================================================
 model FeeQuote {
-  id                       String   @id @default(cuid())
-  tenantId                 String   @map("tenant_id")
-  leadId                   String?  @map("lead_id")
-  clientId                 String?  @map("client_id")
-  matterId                 String?  @map("matter_id")
-  productId                String?  @map("product_id")
-  serviceScope             String?  @map("service_scope") @db.Text
-  excludedScope            String?  @map("excluded_scope") @db.Text
-  lawyerFee                Decimal? @map("lawyer_fee") @db.Decimal(18, 2)
-  thirdPartyCosts          Json?    @map("third_party_costs")
-  paymentSchedule          String?  @map("payment_schedule") @db.Text
-  additionalFeeConditions  String?  @map("additional_fee_conditions") @db.Text
-  riskDisclosureId         String?  @map("risk_disclosure_id")
-  approvedBy               String?  @map("approved_by")
-  clientConfirmed          Boolean  @default(false) @map("client_confirmed")
-  status                   String   @default("DRAFT") @db.VarChar(50)
-  createdAt                DateTime @default(now()) @map("created_at")
-  updatedAt                DateTime @updatedAt @map("updated_at")
+  id                      String   @id @default(cuid())
+  tenantId                String   @map("tenant_id")
+  leadId                  String?  @map("lead_id")
+  clientId                String?  @map("client_id")
+  matterId                String?  @map("matter_id")
+  productId               String?  @map("product_id")
+  serviceScope            String?  @map("service_scope") @db.Text
+  excludedScope           String?  @map("excluded_scope") @db.Text
+  lawyerFee               Decimal? @map("lawyer_fee") @db.Decimal(18, 2)
+  thirdPartyCosts         Json?    @map("third_party_costs")
+  paymentSchedule         String?  @map("payment_schedule") @db.Text
+  additionalFeeConditions String?  @map("additional_fee_conditions") @db.Text
+  riskDisclosureId        String?  @map("risk_disclosure_id")
+  approvedBy              String?  @map("approved_by")
+  clientConfirmed         Boolean  @default(false) @map("client_confirmed")
+  status                  String   @default("DRAFT") @db.VarChar(50)
+  createdAt               DateTime @default(now()) @map("created_at")
+  updatedAt               DateTime @updatedAt @map("updated_at")
 
   tenant  Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   lead    Lead?           @relation(fields: [leadId], references: [id])
@@ -264,22 +265,22 @@ model FeeQuote {
 // 8.9 客户表 clients
 // =====================================================================
 model Client {
-  id              String   @id @default(cuid())
-  tenantId        String   @map("tenant_id")
-  clientName      String   @map("client_name") @db.VarChar(255)
-  clientType      String   @map("client_type") @db.VarChar(50) // INDIVIDUAL / ENTERPRISE
-  creditCode      String?  @map("credit_code") @db.VarChar(100)
-  industry        String?  @db.VarChar(100)
-  contactName     String?  @map("contact_name") @db.VarChar(100)
-  contactMobile   String?  @map("contact_mobile") @db.VarChar(50)
-  contactEmail    String?  @map("contact_email") @db.VarChar(100)
-  riskLevel       String   @default("LOW") @map("risk_level") @db.VarChar(50)
-  healthScore     Int      @default(100) @map("health_score")
-  status          String   @default("ACTIVE") @db.VarChar(50)
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  id            String   @id @default(cuid())
+  tenantId      String   @map("tenant_id")
+  clientName    String   @map("client_name") @db.VarChar(255)
+  clientType    String   @map("client_type") @db.VarChar(50) // INDIVIDUAL / ENTERPRISE
+  creditCode    String?  @map("credit_code") @db.VarChar(100)
+  industry      String?  @db.VarChar(100)
+  contactName   String?  @map("contact_name") @db.VarChar(100)
+  contactMobile String?  @map("contact_mobile") @db.VarChar(50)
+  contactEmail  String?  @map("contact_email") @db.VarChar(100)
+  riskLevel     String   @default("LOW") @map("risk_level") @db.VarChar(50)
+  healthScore   Int      @default(100) @map("health_score")
+  status        String   @default("ACTIVE") @db.VarChar(50)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
-  tenant  Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant  Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   matters Matter[]
   quotes  FeeQuote[]
 
@@ -292,28 +293,28 @@ model Client {
 // 8.10 案件表 matters
 // =====================================================================
 model Matter {
-  id                       String   @id @default(cuid())
-  tenantId                 String   @map("tenant_id")
-  clientId                 String   @map("client_id")
-  matterNo                 String   @unique @map("matter_no") @db.VarChar(100)
-  matterTitle              String   @map("matter_title") @db.VarChar(255)
-  matterType               String?  @map("matter_type") @db.VarChar(100)
-  disputeAmount            Decimal? @map("dispute_amount") @db.Decimal(18, 2)
-  status                   String   @default("LEAD") @db.VarChar(100)
-  confidentialityLevel     String   @default("L3_MATTER_TEAM") @map("confidentiality_level") @db.VarChar(50)
-  responsiblePartnerId     String?  @map("responsible_partner_id")
-  leadLawyerId             String?  @map("lead_lawyer_id")
-  billingType              String   @map("billing_type") @db.VarChar(50)
-  budgetAmount             Decimal? @map("budget_amount") @db.Decimal(18, 2)
-  openedAt                 DateTime? @map("opened_at")
-  closedAt                 DateTime? @map("closed_at")
-  createdAt                DateTime @default(now()) @map("created_at")
-  updatedAt                DateTime @updatedAt @map("updated_at")
+  id                   String    @id @default(cuid())
+  tenantId             String    @map("tenant_id")
+  clientId             String    @map("client_id")
+  matterNo             String    @unique @map("matter_no") @db.VarChar(100)
+  matterTitle          String    @map("matter_title") @db.VarChar(255)
+  matterType           String?   @map("matter_type") @db.VarChar(100)
+  disputeAmount        Decimal?  @map("dispute_amount") @db.Decimal(18, 2)
+  status               String    @default("LEAD") @db.VarChar(100)
+  confidentialityLevel String    @default("L3_MATTER_TEAM") @map("confidentiality_level") @db.VarChar(50)
+  responsiblePartnerId String?   @map("responsible_partner_id")
+  leadLawyerId         String?   @map("lead_lawyer_id")
+  billingType          String    @map("billing_type") @db.VarChar(50)
+  budgetAmount         Decimal?  @map("budget_amount") @db.Decimal(18, 2)
+  openedAt             DateTime? @map("opened_at")
+  closedAt             DateTime? @map("closed_at")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
 
-  tenant             Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  client             Client @relation(fields: [clientId], references: [id])
-  responsiblePartner User?  @relation("ResponsiblePartner", fields: [responsiblePartnerId], references: [id])
-  leadLawyer         User?  @relation("LeadLawyer", fields: [leadLawyerId], references: [id])
+  tenant             Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  client             Client              @relation(fields: [clientId], references: [id])
+  responsiblePartner User?               @relation("ResponsiblePartner", fields: [responsiblePartnerId], references: [id])
+  leadLawyer         User?               @relation("LeadLawyer", fields: [leadLawyerId], references: [id])
   lushiConversations LushiConversation[]
   timeEntries        TimeEntry[]
   knowledgeCards     KnowledgeCard[]
@@ -329,22 +330,22 @@ model Matter {
 // 8.11 律时对话表 lushi_conversations
 // =====================================================================
 model LushiConversation {
-  id                  String   @id @default(cuid())
-  tenantId            String   @map("tenant_id")
-  userId              String   @map("user_id")
-  clientId            String?  @map("client_id")
-  leadId              String?  @map("lead_id")
-  matterId            String?  @map("matter_id")
-  conversationType    String   @map("conversation_type") @db.VarChar(50) // 5 个律时角色
-  channel             String   @db.VarChar(50) // WEB / IM / VOICE / VIDEO
-  startedAt           DateTime @map("started_at")
-  endedAt             DateTime? @map("ended_at")
-  summary             String?  @db.Text
-  riskLevel           String   @default("LOW") @map("risk_level") @db.VarChar(50)
-  createdAt           DateTime @default(now()) @map("created_at")
+  id               String    @id @default(cuid())
+  tenantId         String    @map("tenant_id")
+  userId           String    @map("user_id")
+  clientId         String?   @map("client_id")
+  leadId           String?   @map("lead_id")
+  matterId         String?   @map("matter_id")
+  conversationType String    @map("conversation_type") @db.VarChar(50) // 5 个律时角色
+  channel          String    @db.VarChar(50) // WEB / IM / VOICE / VIDEO
+  startedAt        DateTime  @map("started_at")
+  endedAt          DateTime? @map("ended_at")
+  summary          String?   @db.Text
+  riskLevel        String    @default("LOW") @map("risk_level") @db.VarChar(50)
+  createdAt        DateTime  @default(now()) @map("created_at")
 
-  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  matter   Matter?  @relation(fields: [matterId], references: [id])
+  tenant   Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  matter   Matter?        @relation(fields: [matterId], references: [id])
   messages LushiMessage[]
 
   @@index([tenantId, userId, startedAt])
@@ -357,17 +358,17 @@ model LushiConversation {
 // 8.12 律时消息表 lushi_messages
 // =====================================================================
 model LushiMessage {
-  id                String   @id @default(cuid())
-  conversationId    String   @map("conversation_id")
-  senderType        String   @map("sender_type") @db.VarChar(50) // USER / LUSHI / LAWYER
-  senderId          String   @map("sender_id")
-  contentType       String   @map("content_type") @db.VarChar(50) // TEXT / VOICE / IMAGE / FILE
-  content           String   @db.Text
-  audioFileId       String?  @map("audio_file_id")
-  visibility        String   @db.VarChar(50) // 数据密级
-  aiGenerated       Boolean  @default(false) @map("ai_generated")
-  lawyerApproved    Boolean  @default(false) @map("lawyer_approved")
-  createdAt         DateTime @default(now()) @map("created_at")
+  id             String   @id @default(cuid())
+  conversationId String   @map("conversation_id")
+  senderType     String   @map("sender_type") @db.VarChar(50) // USER / LUSHI / LAWYER
+  senderId       String   @map("sender_id")
+  contentType    String   @map("content_type") @db.VarChar(50) // TEXT / VOICE / IMAGE / FILE
+  content        String   @db.Text
+  audioFileId    String?  @map("audio_file_id")
+  visibility     String   @db.VarChar(50) // 数据密级
+  aiGenerated    Boolean  @default(false) @map("ai_generated")
+  lawyerApproved Boolean  @default(false) @map("lawyer_approved")
+  createdAt      DateTime @default(now()) @map("created_at")
 
   conversation LushiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
@@ -379,26 +380,26 @@ model LushiMessage {
 // 8.13 工时表 time_entries
 // =====================================================================
 model TimeEntry {
-  id                    String    @id @default(cuid())
-  tenantId              String    @map("tenant_id")
-  matterId              String?   @map("matter_id")
-  clientId              String?   @map("client_id")
-  userId                String    @map("user_id")
-  taskId                String?   @map("task_id")
-  startTime             DateTime  @map("start_time")
-  endTime               DateTime? @map("end_time")
-  durationMinutes       Int?      @map("duration_minutes")
-  workType              String?   @map("work_type") @db.VarChar(100)
-  billable              Boolean   @default(true)
-  billingRate           Decimal?  @map("billing_rate") @db.Decimal(18, 2)
-  internalDescription   String?   @map("internal_description") @db.Text
-  clientDescription     String?   @map("client_description") @db.Text
-  source                String    @db.VarChar(50) // 15.2 工时来源
-  status                String    @default("RUNNING") @db.VarChar(50) // 15.3 工时状态
-  reviewedBy            String?   @map("reviewed_by")
-  reviewedAt            DateTime? @map("reviewed_at")
-  createdAt             DateTime  @default(now()) @map("created_at")
-  updatedAt             DateTime  @updatedAt @map("updated_at")
+  id                  String    @id @default(cuid())
+  tenantId            String    @map("tenant_id")
+  matterId            String?   @map("matter_id")
+  clientId            String?   @map("client_id")
+  userId              String    @map("user_id")
+  taskId              String?   @map("task_id")
+  startTime           DateTime  @map("start_time")
+  endTime             DateTime? @map("end_time")
+  durationMinutes     Int?      @map("duration_minutes")
+  workType            String?   @map("work_type") @db.VarChar(100)
+  billable            Boolean   @default(true)
+  billingRate         Decimal?  @map("billing_rate") @db.Decimal(18, 2)
+  internalDescription String?   @map("internal_description") @db.Text
+  clientDescription   String?   @map("client_description") @db.Text
+  source              String    @db.VarChar(50) // 15.2 工时来源
+  status              String    @default("RUNNING") @db.VarChar(50) // 15.3 工时状态
+  reviewedBy          String?   @map("reviewed_by")
+  reviewedAt          DateTime? @map("reviewed_at")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
 
   tenant   Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   matter   Matter? @relation(fields: [matterId], references: [id])
@@ -415,18 +416,18 @@ model TimeEntry {
 // 8.14 质检表 service_quality_checks
 // =====================================================================
 model ServiceQualityCheck {
-  id                  String   @id @default(cuid())
-  tenantId            String   @map("tenant_id")
-  leadId              String?  @map("lead_id")
-  matterId            String?  @map("matter_id")
-  checkType           String   @map("check_type") @db.VarChar(100) // CONTENT / QUOTE / DOCUMENT / SERVICE
-  checkedObjectType   String?  @map("checked_object_type") @db.VarChar(100)
-  checkedObjectId     String?  @map("checked_object_id")
-  score               Int?
-  riskFlags           Json?    @map("risk_flags")
-  reviewerId          String?  @map("reviewer_id")
-  reviewComments      String?  @map("review_comments") @db.Text
-  createdAt           DateTime @default(now()) @map("created_at")
+  id                String   @id @default(cuid())
+  tenantId          String   @map("tenant_id")
+  leadId            String?  @map("lead_id")
+  matterId          String?  @map("matter_id")
+  checkType         String   @map("check_type") @db.VarChar(100) // CONTENT / QUOTE / DOCUMENT / SERVICE
+  checkedObjectType String?  @map("checked_object_type") @db.VarChar(100)
+  checkedObjectId   String?  @map("checked_object_id")
+  score             Int?
+  riskFlags         Json?    @map("risk_flags")
+  reviewerId        String?  @map("reviewer_id")
+  reviewComments    String?  @map("review_comments") @db.Text
+  createdAt         DateTime @default(now()) @map("created_at")
 
   tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   reviewer User?  @relation(fields: [reviewerId], references: [id])
@@ -440,28 +441,28 @@ model ServiceQualityCheck {
 // 8.15 知识卡片表 knowledge_cards
 // =====================================================================
 model KnowledgeCard {
-  id                  String   @id @default(cuid())
-  tenantId            String   @map("tenant_id")
-  sourceMatterId      String?  @map("source_matter_id")
-  title               String   @db.VarChar(255)
-  cardType            String   @map("card_type") @db.VarChar(100) // 16.2 卡片类型
-  practiceArea        String?  @map("practice_area") @db.VarChar(100)
-  issueTags           String?  @map("issue_tags") @db.VarChar(500)
-  content             String   @db.Text
-  riskNotes           String?  @map("risk_notes") @db.Text
-  reusableTemplates   String?  @map("reusable_templates") @db.Text
-  visibility          String   @default("FIRM") @db.VarChar(50)
-  desensitized        Boolean  @default(false)
-  reviewStatus        String   @default("DRAFT") @map("review_status") @db.VarChar(50)
-  reviewedBy          String?  @map("reviewed_by")
-  createdBy           String   @map("created_by")
-  createdAt           DateTime @default(now()) @map("created_at")
-  updatedAt           DateTime @updatedAt @map("updated_at")
+  id                String   @id @default(cuid())
+  tenantId          String   @map("tenant_id")
+  sourceMatterId    String?  @map("source_matter_id")
+  title             String   @db.VarChar(255)
+  cardType          String   @map("card_type") @db.VarChar(100) // 16.2 卡片类型
+  practiceArea      String?  @map("practice_area") @db.VarChar(100)
+  issueTags         String?  @map("issue_tags") @db.VarChar(500)
+  content           String   @db.Text
+  riskNotes         String?  @map("risk_notes") @db.Text
+  reusableTemplates String?  @map("reusable_templates") @db.Text
+  visibility        String   @default("FIRM") @db.VarChar(50)
+  desensitized      Boolean  @default(false)
+  reviewStatus      String   @default("DRAFT") @map("review_status") @db.VarChar(50)
+  reviewedBy        String?  @map("reviewed_by")
+  createdBy         String   @map("created_by")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
 
   tenant       Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   sourceMatter Matter? @relation(fields: [sourceMatterId], references: [id])
-  creator      User    @relation(fields: [createdBy], references: [id])
-  reviewer     User?   @relation(fields: [reviewedBy], references: [id])
+  creator      User    @relation("CardCreator", fields: [createdBy], references: [id])
+  reviewer     User?   @relation("CardReviewer", fields: [reviewedBy], references: [id])
 
   @@index([tenantId, cardType])
   @@index([tenantId, visibility])
@@ -473,20 +474,20 @@ model KnowledgeCard {
 // 审计日志表(任务书 13.2 必备)
 // =====================================================================
 model AuditLog {
-  id          String   @id @default(cuid())
-  tenantId    String   @map("tenant_id")
-  userId      String?  @map("user_id")
-  action      String   @db.VarChar(100) // LOGIN / VIEW / CREATE / UPDATE / DELETE / EXPORT / AI_CALL ...
-  resourceType String? @map("resource_type") @db.VarChar(100)
-  resourceId  String?  @map("resource_id")
-  dataLevel   String?  @map("data_level") @db.VarChar(50) // 含 L4+ 即告警
-  ip          String?  @db.VarChar(50)
-  userAgent   String?  @map("user_agent") @db.Text
-  input       Json?    // 输入(脱敏)
-  output      Json?    // 输出
-  result      String   @default("SUCCESS") @db.VarChar(50) // SUCCESS / FAILURE
-  traceId     String?  @map("trace_id") @db.VarChar(100)
-  createdAt   DateTime @default(now()) @map("created_at")
+  id           String   @id @default(cuid())
+  tenantId     String   @map("tenant_id")
+  userId       String?  @map("user_id")
+  action       String   @db.VarChar(100) // LOGIN / VIEW / CREATE / UPDATE / DELETE / EXPORT / AI_CALL ...
+  resourceType String?  @map("resource_type") @db.VarChar(100)
+  resourceId   String?  @map("resource_id")
+  dataLevel    String?  @map("data_level") @db.VarChar(50) // 含 L4+ 即告警
+  ip           String?  @db.VarChar(50)
+  userAgent    String?  @map("user_agent") @db.Text
+  input        Json? // 输入(脱敏)
+  output       Json? // 输出
+  result       String   @default("SUCCESS") @db.VarChar(50) // SUCCESS / FAILURE
+  traceId      String?  @map("trace_id") @db.VarChar(100)
+  createdAt    DateTime @default(now()) @map("created_at")
 
   @@index([tenantId, action, createdAt])
   @@index([tenantId, userId, createdAt])

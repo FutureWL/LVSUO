@@ -8,6 +8,9 @@ const http: AxiosInstance = axios.create({
   timeout: 30000,
 });
 
+// 统一响应拦截器：返回 res.data 而不是 res
+http.interceptors.response.use((res) => res.data);
+
 http.interceptors.request.use((config) => {
   const auth = useAuthStore();
   if (auth.token) {

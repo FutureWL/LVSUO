@@ -1,6 +1,5 @@
-import { Global, Module, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { Global, Module, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
-import { PinoLogger } from 'nestjs-pino';
 
 @Global()
 @Module({
@@ -18,12 +17,9 @@ import { PinoLogger } from 'nestjs-pino';
   exports: [PrismaClient],
 })
 export class PrismaModule implements OnModuleInit, OnModuleDestroy {
-  constructor(
-    private readonly prisma: PrismaClient,
-    private readonly logger: PinoLogger,
-  ) {
-    this.logger.setContext(PrismaModule.name);
-  }
+  private readonly logger = new Logger(PrismaModule.name);
+
+  constructor(private readonly prisma: PrismaClient) {}
 
   async onModuleInit() {
     await this.prisma.$connect();
