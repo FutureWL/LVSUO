@@ -1,10 +1,14 @@
 <script setup lang="ts">
 import http from '@/api/http';
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { buildDashboardStats, type DashboardResponses } from '@/utils/dashboard';
+import { isPlatformRole } from '@/utils/roles';
+import { useAuthStore } from '@/stores/auth';
 
 const router = useRouter();
+const auth = useAuthStore();
+
 const stats = ref<ReturnType<typeof buildDashboardStats>>(
   buildDashboardStats({
     leads: {},
@@ -15,6 +19,21 @@ const stats = ref<ReturnType<typeof buildDashboardStats>>(
     quotes: {},
   }),
 );
+
+// 快捷操作的可见性 — 按角色过滤
+// 平台角色(PLATFORM_*)看平台级别(产品/知识卡/客户)
+// 律所角色看业务级别(线索/客户/报价/案件)
+const isPlatform = computed(() => isPlatformRole(auth.user?.role));
+
+// 业务指标卡片的可见性 — 哪些指标对当前角色可见
+const visibleStats = computed(() => ({
+  leads: !isPlatform.value,
+  matters: !isPlatform.value,
+  products: isPlatform.value,
+  cards: isPlatform.value,
+  clients: true, // 业务+平台都看
+  quotes: !isPlatform.value,
+}));
 
 onMounted(async () => {
   try {
@@ -39,31 +58,37 @@ onMounted(async () => {
     <h2>总览驾驶舱</h2>
     <p style="color: #888">任务书 11.1 / 12.x · 律所核心指标可视化</p>
     <el-row :gutter="20" style="margin-top: 24px">
-      <el-col :span="6">
+      <el-col v-if="visibleStats.leads" :span="6">
         <el-card>
           <h3>线索总数</h3>
           <p style="font-size: 32px; color: #1890ff">{{ stats.leads }}</p>
         </el-card>
       </el-col>
-      <el-col :span="6">
+      <el-col v-if="visibleStats.matters" :span="6">
         <el-card>
           <h3>案件总数</h3>
           <p style="font-size: 32px; color: #52c41a">{{ stats.matters }}</p>
         </el-card>
       </el-col>
-      <el-col :span="6">
+      <el-col v-if="visibleStats.products" :span="6">
         <el-card>
           <h3>服务产品</h3>
           <p style="font-size: 32px; color: #722ed1">{{ stats.products }}</p>
         </el-card>
       </el-col>
-      <el-col :span="6">
+      <el-col v-if="visibleStats.cards" :span="6">
+        <el-card>
+          <h3>知识卡</h3>
+          <p style="font-size: 32px; color: #13c2c2">{{ stats.cards }}</p>
+        </el-card>
+      </el-col>
+      <el-col v-if="visibleStats.clients" :span="6">
         <el-card>
           <h3>客户</h3>
           <p style="font-size: 32px; color: #fa8c16">{{ stats.clients }}</p>
         </el-card>
       </el-col>
-      <el-col :span="6">
+      <el-col v-if="visibleStats.quotes" :span="6">
         <el-card>
           <h3>报价卡</h3>
           <p style="font-size: 32px; color: #eb2f96">{{ stats.quotes }}</p>
@@ -76,10 +101,12 @@ onMounted(async () => {
         <span>快捷操作</span>
       </template>
       <el-space>
-        <el-button type="primary" @click="router.push('/leads')">线索看板</el-button>
+        <el-button v-if="!isPlatform" type="primary" @click="router.push('/leads')"
+          >线索看板</el-button
+        >
         <el-button @click="router.push('/clients')">客户中心</el-button>
-        <el-button @click="router.push('/quotes/create')">新建报价</el-button>
-        <el-button @click="router.push('/matters/create')">新建案件</el-button>
+        <el-button v-if="!isPlatform" @click="router.push('/quotes/create')">新建报价</el-button>
+        <el-button v-if="!isPlatform" @click="router.push('/matters/create')">新建案件</el-button>
       </el-space>
     </el-card>
 

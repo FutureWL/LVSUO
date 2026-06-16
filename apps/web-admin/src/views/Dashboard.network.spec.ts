@@ -4,6 +4,7 @@ import { setActivePinia, createPinia } from 'pinia';
 import { mount, flushPromises } from '@vue/test-utils';
 import { defineComponent, h } from 'vue';
 import { server, http, HttpResponse } from '@/test/msw';
+import { useAuthStore } from '@/stores/auth';
 import Dashboard from './Dashboard.vue';
 
 /**
@@ -29,10 +30,13 @@ const ElStub = defineComponent({
 beforeAll(() => server.listen({ onUnhandledRequest: 'warn' }));
 afterAll(() => server.close());
 afterEach(() => server.resetHandlers());
-beforeEach(() => setActivePinia(createPinia()));
+beforeEach(() => {
+  setActivePinia(createPinia());
+  localStorage.clear();
+});
 
 describe('Dashboard 真实集成(MSW)', () => {
-  it('6 路端点都返回 → 6 张统计卡显示正确数字', async () => {
+  it('6 路端点都返回 → 6 张统计卡显示正确数字(律所角色)', async () => {
     // 6 路响应分别 mock
     server.use(
       http.get(/\/api\/leads(\?|$)/, () =>
@@ -56,6 +60,14 @@ describe('Dashboard 真实集成(MSW)', () => {
         HttpResponse.json({ items: [], total: 3, page: 1, pageSize: 1 }),
       ),
     );
+    // 律所角色:看 leads/matters/clients/quotes (4 张)
+    useAuthStore().setAuth('jwt-test', {
+      id: 'u1',
+      username: 'admin',
+      realName: '管理员',
+      role: 'FIRM_ADMIN',
+      tenantId: 't1',
+    });
 
     const wrapper = mount(Dashboard, {
       global: {
@@ -70,19 +82,65 @@ describe('Dashboard 真实集成(MSW)', () => {
         },
       },
     });
-    // 等 onMounted 的 Promise.all 走完
     await flushPromises();
-    // 多次 flushPromises(网络是异步的,需要等 MSW handler 走完)
     await flushPromises();
     await flushPromises();
 
     const text = wrapper.text();
+    // 律所角色看到的 4 张
     expect(text).toContain('42'); // leads
     expect(text).toContain('17'); // matters
-    expect(text).toContain('5'); // products (list length)
-    expect(text).toContain('2'); // cards
     expect(text).toContain('8'); // clients
     expect(text).toContain('3'); // quotes
+  });
+
+  it('6 路端点都返回 → 平台角色看 3 张', async () => {
+    server.use(
+      http.get(/\/api\/leads(\?|$)/, () =>
+        HttpResponse.json({ items: [], total: 42, page: 1, pageSize: 1 }),
+      ),
+      http.get(/\/api\/matters(\?|$)/, () =>
+        HttpResponse.json({ items: [], total: 17, page: 1, pageSize: 1 }),
+      ),
+      http.get(/\/api\/service-products/, () => HttpResponse.json([{}, {}, {}, {}, {}])),
+      http.get(/\/api\/knowledge-cards/, () => HttpResponse.json([{}, {}])),
+      http.get(/\/api\/clients(\?|$)/, () =>
+        HttpResponse.json({ items: [], total: 8, page: 1, pageSize: 1 }),
+      ),
+      http.get(/\/api\/quotes(\?|$)/, () =>
+        HttpResponse.json({ items: [], total: 3, page: 1, pageSize: 1 }),
+      ),
+    );
+    // 平台角色:看 products/cards/clients (3 张)
+    useAuthStore().setAuth('jwt-test', {
+      id: 'u1',
+      username: 'admin',
+      realName: '管理员',
+      role: 'PLATFORM_ADMIN',
+      tenantId: 't1',
+    });
+
+    const wrapper = mount(Dashboard, {
+      global: {
+        components: {
+          ElButton: ElStub,
+          ElCard: ElStub,
+          ElRow: ElStub,
+          ElCol: ElStub,
+          ElSpace: ElStub,
+          ElDescriptions: ElStub,
+          ElDescriptionsItem: ElStub,
+        },
+      },
+    });
+    await flushPromises();
+    await flushPromises();
+    await flushPromises();
+
+    const text = wrapper.text();
+    expect(text).toContain('5'); // products
+    expect(text).toContain('2'); // cards
+    expect(text).toContain('8'); // clients
   });
 
   it('某端点 500 → onMounted 的 try/catch 吞掉,页面仍渲染(数字为 0)', async () => {
