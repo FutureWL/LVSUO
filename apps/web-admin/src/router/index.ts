@@ -100,13 +100,22 @@ const router = createRouter({
   routes,
 });
 
-router.beforeEach((to, _from, next) => {
+/**
+ * 路由守卫 —— 导出为函数以便单测(原内联在 router.beforeEach)
+ *  - 跳转前 auth.rehydrate() 同步 localStorage
+ *  - public 路由直接放行
+ *  - 未登录重定向 /login,带 redirect query 记录目标
+ *  - requiresPlatform 路由只允许 PLATFORM_* 角色
+ */
+export function authGuard(
+  to: ReturnType<typeof router.resolve> extends infer R ? any : never,
+  _from: any,
+  next: (to?: any) => void,
+) {
   const auth = useAuthStore();
-  // 路由跳转前先同步 localStorage(防御刷新后 store 状态丢失)
   auth.rehydrate();
   if (to.meta.public) return next();
   if (!auth.isAuthenticated) {
-    // 跳转目标去掉 /lvsuo/ base，避免登录成功后 router.push 把 base 再拼一次
     const base = import.meta.env.BASE_URL || '/';
     const redirect =
       base !== '/' && to.fullPath.startsWith(base)
@@ -114,11 +123,12 @@ router.beforeEach((to, _from, next) => {
         : to.fullPath;
     return next({ name: 'login', query: { redirect } });
   }
-  // 平台角色才能进入的路由
   if (to.meta.requiresPlatform && !auth.user?.role?.startsWith('PLATFORM_')) {
     return next({ name: 'dashboard' });
   }
   next();
-});
+}
+
+router.beforeEach(authGuard as any);
 
 export default router;
