@@ -33,3 +33,20 @@ export interface ServiceProduct {
   createdAt: Date;
   updatedAt: Date;
 }
+
+export interface CreateServiceProductInput {
+  tenantId: string;
+  productName: string;
+  productType: ProductType;
+  applicableScenarios?: string;
+  excludedScenarios?: string;
+  serviceScope?: string;
+  excludedScope?: string;
+  deliverables?: string;
+  requiredMaterials?: string;
+  priceType?: PriceType;
+  basePrice?: number;
+  deliveryDays?: number;
+  requiresLawyer?: boolean;
+  requiresPartnerApproval?: boolean;
+}

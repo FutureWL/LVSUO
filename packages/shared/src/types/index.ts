@@ -4,6 +4,8 @@ export * from './service-product.js';
 export * from './marketing-account.js';
 export * from './marketing-content.js';
 export * from './lead.js';
+export * from './client.js';
+export * from './quote.js';
 export * from './matter.js';
 export * from './time-entry.js';
 export * from './lushi-conversation.js';

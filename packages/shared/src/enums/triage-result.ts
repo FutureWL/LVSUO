@@ -13,3 +13,18 @@ export enum TriageResult {
   LEGAL_AID_RECOMMENDED = 'LEGAL_AID_RECOMMENDED',
   URGENT_LAWYER_REVIEW = 'URGENT_LAWYER_REVIEW',
 }
+
+export const TRIAGE_RESULT_NAME: Record<TriageResult, string> = {
+  [TriageResult.SELF_HELP_INFO]: '自助法律信息',
+  [TriageResult.STRUCTURED_DIAGNOSIS]: '结构化诊断',
+  [TriageResult.DOCUMENT_SERVICE]: '文书服务',
+  [TriageResult.PROCESS_GUIDANCE]: '流程辅导',
+  [TriageResult.SINGLE_NODE_SERVICE]: '单节点代理',
+  [TriageResult.FULL_REPRESENTATION]: '完整代理',
+  [TriageResult.MEDIATION_RECOMMENDED]: '建议调解',
+  [TriageResult.ARBITRATION_RECOMMENDED]: '建议仲裁',
+  [TriageResult.LITIGATION_RECOMMENDED]: '建议诉讼',
+  [TriageResult.NOT_SUITABLE]: '不适合承接',
+  [TriageResult.LEGAL_AID_RECOMMENDED]: '建议法律援助',
+  [TriageResult.URGENT_LAWYER_REVIEW]: '紧急律师介入',
+};

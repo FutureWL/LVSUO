@@ -1,6 +1,6 @@
 import { LeadStatus, ClientSentiment } from '../enums/index.js';
+import type { ClientType } from './client.js';
 
-export type ClientType = 'INDIVIDUAL' | 'ENTERPRISE';
 export type UrgencyLevel = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
 
 export interface Lead {
