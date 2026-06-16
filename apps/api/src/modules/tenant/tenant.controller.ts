@@ -1,9 +1,9 @@
 import { Controller, Get, Param, ForbiddenException } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { TenantService } from './tenant.service';
 import { RequirePerm } from '../../common/permission/permission.decorator';
 import { CurrentUser } from '../../common/auth/current-user.decorator';
-import type { JwtPayload } from '@lm-unity/shared';
+import { ErrorCode, type JwtPayload } from '@lm-unity/shared';
 
 @ApiTags('tenant')
 @ApiBearerAuth()
@@ -14,6 +14,10 @@ export class TenantController {
   @Get(':id')
   @RequirePerm({ action: 'tenant:read' })
   @ApiOperation({ summary: '查询租户详情' })
+  @ApiParam({ name: 'id', description: '租户 ID' })
+  @ApiResponse({ status: 200, description: 'Tenant', schema: { example: { id: 't1', tenantName: '示例律所', tenantType: 'FIRM', deploymentMode: 'SAAS', status: 'ACTIVE' } } })
+  @ApiResponse({ status: 403, description: ErrorCode.FORBIDDEN })
+  @ApiResponse({ status: 404, description: ErrorCode.TENANT_NOT_FOUND })
   async one(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
     // 平台角色可以查任何租户
     if (user.role?.startsWith('PLATFORM_')) {
