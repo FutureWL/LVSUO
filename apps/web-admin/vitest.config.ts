@@ -1,30 +1,21 @@
 import { defineConfig } from 'vitest/config';
 import vue from '@vitejs/plugin-vue';
-import AutoImport from 'unplugin-auto-import/vite';
-import Components from 'unplugin-vue-components/vite';
-import { ElementPlusResolver } from 'unplugin-vue-components/resolvers';
 import path from 'node:path';
 
 /**
- * vitest 配置
+ * vitest 配置(精简版,不引入 AutoImport / unplugin-vue-components)
  *  - environment: node 优先(纯函数测试不需要 DOM);后续 component 测试切 happy-dom
- *  - include: src/**\/*.{test,spec}.ts
  *  - globals: false,显式 import { describe, it, expect } from 'vitest' 更清晰
- *  - 复用 vite 的 vue / auto-import / components 插件(Vue SFC 测试需要)
+ *  - 只用 vue 插件(Vue SFC 测试需要)
  *
- * 注:本项目是 Vite 5 + Vitest 2 的标准组合,无特殊配置
+ * CSS / element-plus 问题:
+ *  - element-plus 引入的 .css 在 node/happy-dom 下报 'Unknown file extension'
+ *  - vitest.setup.ts 用 vi.mock 整个 'element-plus' 包 + stub 替身
+ *  - 不再需要 AutoImport / Components 插件(它们在 dev/build 才有意义)
+ *  - 这样 .vue 文件里的 <el-button> 等会拿不到, 走 stub
  */
 export default defineConfig({
-  plugins: [
-    vue(),
-    AutoImport({
-      resolvers: [ElementPlusResolver()],
-      imports: ['vue', 'vue-router', 'pinia'],
-    }),
-    Components({
-      resolvers: [ElementPlusResolver()],
-    }),
-  ],
+  plugins: [vue()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -35,5 +26,7 @@ export default defineConfig({
     environment: 'node',
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
     globals: false,
+    css: false,
+    setupFiles: ['./vitest.setup.ts'],
   },
 });
