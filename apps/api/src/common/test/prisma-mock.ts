@@ -29,13 +29,13 @@ type Path = string; // 'user.findFirst' / '$transaction'
 type MockValue = unknown | ((...args: any[]) => any);
 
 function setDeep(obj: any, parts: string[], value: any) {
-  let cur = obj;
+  let cur: any = obj;
   for (let i = 0; i < parts.length - 1; i++) {
-    const k = parts[i];
+    const k = parts[i]!;
     if (cur[k] === undefined) cur[k] = {};
     cur = cur[k];
   }
-  cur[parts[parts.length - 1]] = value;
+  cur[parts[parts.length - 1]!] = value;
 }
 
 function makeMockFn(value: MockValue | undefined) {

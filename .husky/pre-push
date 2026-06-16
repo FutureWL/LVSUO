@@ -1,9 +1,11 @@
 #!/usr/bin/env sh
-# pre-push 钩子 —— 全量 typecheck + api test(慢,~10s,turbo 缓存命中后 < 1s)
+# pre-push 钩子 —— 全量 typecheck + api test + web test(慢,~10s,turbo 缓存命中后 < 1s)
 # 跳过: git push --no-verify
 set -e
 echo "🔍 pre-push: typecheck"
 pnpm typecheck
 echo "🧪 pre-push: api tests"
 pnpm --filter @lm-unity/api test
+echo "🧪 pre-push: web tests"
+pnpm --filter @lm-unity/web-admin test
 echo "✅ pre-push 通过"

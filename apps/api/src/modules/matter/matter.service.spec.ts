@@ -33,7 +33,7 @@ function makeQuoteRow(overrides: Partial<any> = {}) {
 }
 
 function makeServiceWithQuoteAndClient(
-  quoteOverride: any | null | undefined,
+  quoteOverride: any | null | undefined = undefined,
   clientOverride: any | null | undefined = undefined,
 ) {
   const quoteRow = quoteOverride === undefined ? makeQuoteRow() : quoteOverride;
