@@ -1,22 +1,28 @@
 <script setup lang="ts">
 import http from '@/api/http';
 import { ref, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 
-const stats = ref({ leads: 0, matters: 0, products: 0, cards: 0 });
+const router = useRouter();
+const stats = ref({ leads: 0, matters: 0, products: 0, cards: 0, clients: 0, quotes: 0 });
 
 onMounted(async () => {
   try {
-    const [leads, matters, products, cards] = await Promise.all([
+    const [leads, matters, products, cards, clients, quotes] = await Promise.all([
       http.get<{ total: number }>('/leads?page=1&pageSize=1'),
       http.get<{ total: number }>('/matters?page=1&pageSize=1'),
       http.get<any[]>('/service-products'),
       http.get<any[]>('/knowledge-cards'),
+      http.get<{ total: number }>('/clients?page=1&pageSize=1'),
+      http.get<{ total: number }>('/quotes?page=1&pageSize=1'),
     ]);
     stats.value = {
       leads: leads.total ?? 0,
       matters: matters.total ?? 0,
       products: products.length ?? 0,
       cards: cards.length ?? 0,
+      clients: clients.total ?? 0,
+      quotes: quotes.total ?? 0,
     };
   } catch {
     // ignore
@@ -49,11 +55,29 @@ onMounted(async () => {
       </el-col>
       <el-col :span="6">
         <el-card>
-          <h3>知识卡</h3>
-          <p style="font-size: 32px; color: #fa8c16">{{ stats.cards }}</p>
+          <h3>客户</h3>
+          <p style="font-size: 32px; color: #fa8c16">{{ stats.clients }}</p>
+        </el-card>
+      </el-col>
+      <el-col :span="6">
+        <el-card>
+          <h3>报价卡</h3>
+          <p style="font-size: 32px; color: #eb2f96">{{ stats.quotes }}</p>
         </el-card>
       </el-col>
     </el-row>
+
+    <el-card style="margin-top: 24px">
+      <template #header>
+        <span>快捷操作</span>
+      </template>
+      <el-space>
+        <el-button type="primary" @click="router.push('/leads')">线索看板</el-button>
+        <el-button @click="router.push('/clients')">客户中心</el-button>
+        <el-button @click="router.push('/quotes/create')">新建报价</el-button>
+        <el-button @click="router.push('/matters/create')">新建案件</el-button>
+      </el-space>
+    </el-card>
 
     <el-card style="margin-top: 24px">
       <template #header>
