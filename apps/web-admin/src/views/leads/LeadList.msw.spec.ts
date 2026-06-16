@@ -253,20 +253,6 @@ describe('LeadList 端到端(MSW)', () => {
     await flushPromises();
     await flushPromises();
     const vm = wrapper.vm as any;
-    // 调试
-    console.log(
-      'items:',
-      JSON.stringify(vm.items),
-      'loading:',
-      vm.loading,
-      'empty:',
-      vm.empty,
-      'rows:',
-      wrapper.findAll('[data-row]').length,
-      'empty-el:',
-      wrapper.findAll('[data-empty]').length,
-    );
-    console.log('TEXT:', wrapper.text());
     expect(vm.loading).toBe(false);
     expect(vm.items.length).toBe(0);
     expect(vm.empty).toBe(true);
