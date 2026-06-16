@@ -20,9 +20,7 @@
     "noFallthroughCasesInSwitch": false,
     "esModuleInterop": true
   },
-  "references": [
-    { "path": "../../packages/shared" }
-  ],
-  "include": ["src/**/*", "test/**/*"],
-  "exclude": ["node_modules", "dist", "../../packages"]
+  "references": [{ "path": "../../packages/shared" }],
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "test", "../../packages"]
 }
