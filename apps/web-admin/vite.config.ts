@@ -42,11 +42,11 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
         },
         // 2) 通过 nginx 子目录代理时的 API 路径
-        //    /lvsuo/api/counsel/v1/health → /api/counsel/v1/health
+        //    /lvsuo/api/auth/login → /api/counsel/v1/auth/login
         '/lvsuo/api': {
           target: env.VITE_API_PROXY_TARGET || 'http://localhost:3000',
           changeOrigin: true,
-          rewrite: (p) => p.replace(/^\/lvsuo\/api/, '/api'),
+          rewrite: (p) => p.replace(/^\/lvsuo\/api/, '/api/counsel/v1'),
         },
       },
       hmr: {
