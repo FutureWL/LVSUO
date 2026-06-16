@@ -2,51 +2,17 @@ import { Injectable, BadRequestException, NotFoundException } from '@nestjs/comm
 import { PrismaClient } from '@prisma/client';
 import { ErrorCode, FeeQuote, QuoteStatus, type PageResponse } from '@lm-unity/shared';
 import { buildPage } from '../../common/pagination';
+import { validateQuoteRules } from './quote-rules';
 
 @Injectable()
 export class QuoteService {
   constructor(private readonly prisma: PrismaClient) {}
 
   /**
-   * 任务书 10.4 报价阻断规则
+   * 任务书 10.4 报价阻断规则 —— 详见 quote-rules.ts(已抽出便于单测)
    */
-  private validate(input: {
-    serviceScope?: string;
-    excludedScope?: string;
-    thirdPartyCosts?: any;
-    riskDisclosureConfirmed?: boolean;
-    containsSuccessPromise?: boolean;
-  }) {
-    if (!input.serviceScope) {
-      throw new BadRequestException({
-        code: ErrorCode.QUOTE_SCOPE_EMPTY,
-        message: '服务范围不能为空',
-      });
-    }
-    if (!input.excludedScope) {
-      throw new BadRequestException({
-        code: ErrorCode.QUOTE_EXCLUDED_EMPTY,
-        message: '必须说明不包含事项',
-      });
-    }
-    if (!input.thirdPartyCosts) {
-      throw new BadRequestException({
-        code: ErrorCode.QUOTE_THIRD_PARTY_NOT_EXPLAINED,
-        message: '第三方费用未说明',
-      });
-    }
-    if (!input.riskDisclosureConfirmed) {
-      throw new BadRequestException({
-        code: ErrorCode.RISK_DISCLOSURE_NOT_CONFIRMED,
-        message: '客户未确认风险揭示',
-      });
-    }
-    if (input.containsSuccessPromise) {
-      throw new BadRequestException({
-        code: ErrorCode.QUOTE_CONTAINS_SUCCESS_PROMISE,
-        message: '报价内容不得承诺结果',
-      });
-    }
+  private validate(input: Parameters<typeof validateQuoteRules>[0]) {
+    validateQuoteRules(input);
   }
 
   async create(

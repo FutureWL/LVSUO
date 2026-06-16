@@ -1,7 +1,8 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
-import { Matter, MatterStatus, MATTER_STATUS_TRANSITIONS, CreateMatterInput, QuoteStatus, type PageResponse } from '@lm-unity/shared';
+import { Matter, MatterStatus, CreateMatterInput, QuoteStatus, type PageResponse } from '@lm-unity/shared';
 import { buildPage } from '../../common/pagination';
+import { assertValidMatterTransition } from './matter-rules';
 
 @Injectable()
 export class MatterService {
@@ -65,12 +66,7 @@ export class MatterService {
     const matter = await this.prisma.matter.findFirst({ where: { id: matterId, tenantId } });
     if (!matter) throw new NotFoundException('案件不存在');
 
-    const allowed = MATTER_STATUS_TRANSITIONS[matter.status as MatterStatus] || [];
-    if (!allowed.includes(to)) {
-      throw new BadRequestException(
-        `非法状态流转: ${matter.status} → ${to}`,
-      );
-    }
+    assertValidMatterTransition(matter.status as MatterStatus, to);
 
     return this.prisma.matter.update({
       where: { id: matterId },
