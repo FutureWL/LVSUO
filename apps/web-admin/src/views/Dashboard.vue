@@ -2,28 +2,32 @@
 import http from '@/api/http';
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
+import { buildDashboardStats, type DashboardResponses } from '@/utils/dashboard';
 
 const router = useRouter();
-const stats = ref({ leads: 0, matters: 0, products: 0, cards: 0, clients: 0, quotes: 0 });
+const stats = ref<ReturnType<typeof buildDashboardStats>>(
+  buildDashboardStats({
+    leads: {},
+    matters: {},
+    products: [],
+    cards: [],
+    clients: {},
+    quotes: {},
+  }),
+);
 
 onMounted(async () => {
   try {
     const [leads, matters, products, cards, clients, quotes] = await Promise.all([
       http.get<{ total: number }>('/leads?page=1&pageSize=1'),
       http.get<{ total: number }>('/matters?page=1&pageSize=1'),
-      http.get<any[]>('/service-products'),
-      http.get<any[]>('/knowledge-cards'),
+      http.get<unknown[]>('/service-products'),
+      http.get<unknown[]>('/knowledge-cards'),
       http.get<{ total: number }>('/clients?page=1&pageSize=1'),
       http.get<{ total: number }>('/quotes?page=1&pageSize=1'),
     ]);
-    stats.value = {
-      leads: leads.total ?? 0,
-      matters: matters.total ?? 0,
-      products: products.length ?? 0,
-      cards: cards.length ?? 0,
-      clients: clients.total ?? 0,
-      quotes: quotes.total ?? 0,
-    };
+    const r: DashboardResponses = { leads, matters, products, cards, clients, quotes };
+    stats.value = buildDashboardStats(r);
   } catch {
     // ignore
   }

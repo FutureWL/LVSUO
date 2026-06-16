@@ -4,6 +4,7 @@ import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import http from '@/api/http';
 import { ElMessage } from 'element-plus';
+import { resolveRedirectTarget } from '@/utils/redirect';
 
 const router = useRouter();
 const route = useRoute();
@@ -55,8 +56,7 @@ const onSubmit = async () => {
 
     // 4. 解析跳转目标
     //    默认 /dashboard;若 URL 有 ?redirect=xxx 则跳到那里
-    const rawRedirect = route.query.redirect as string | undefined;
-    const target = rawRedirect && rawRedirect.startsWith('/') ? rawRedirect : '/dashboard';
+    const target = resolveRedirectTarget(route.query as any);
 
     console.log('[Login] redirecting to:', target);
 
