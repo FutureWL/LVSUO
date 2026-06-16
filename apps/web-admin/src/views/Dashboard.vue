@@ -7,10 +7,10 @@ const stats = ref({ leads: 0, matters: 0, products: 0, cards: 0 });
 onMounted(async () => {
   try {
     const [leads, matters, products, cards] = await Promise.all([
-      http.get<any, { total: number }>('/leads?page=1&pageSize=1'),
-      http.get<any, { total: number }>('/matters?page=1&pageSize=1'),
-      http.get<any, any[]>('/service-products'),
-      http.get<any, any[]>('/knowledge-cards'),
+      http.get<{ total: number }>('/leads?page=1&pageSize=1'),
+      http.get<{ total: number }>('/matters?page=1&pageSize=1'),
+      http.get<any[]>('/service-products'),
+      http.get<any[]>('/knowledge-cards'),
     ]);
     stats.value = {
       leads: leads.total ?? 0,

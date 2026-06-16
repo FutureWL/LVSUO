@@ -16,13 +16,34 @@ const form = ref({
 
 const loading = ref(false);
 
+interface LoginResponse {
+  accessToken: string;
+  refreshToken: string;
+  user: {
+    id: string;
+    username: string;
+    realName: string;
+    role: string;
+    tenantId: string;
+  };
+}
+
 const onSubmit = async () => {
+  if (loading.value) return;
   loading.value = true;
   try {
-    const res: any = await http.post('/auth/login', form.value);
+    const res = await http.post<LoginResponse>('/auth/login', form.value);
+    if (!res || !res.accessToken) {
+      ElMessage.error('登录响应异常：未拿到 accessToken');
+      return;
+    }
     auth.setAuth(res.accessToken, res.user);
+    ElMessage.success('登录成功');
     const redirect = (route.query.redirect as string) || '/dashboard';
     router.push(redirect);
+  } catch (err: any) {
+    // 错误已由 http 拦截器弹过 toast，这里只防止 unhandled rejection
+    console.error('[Login] failed:', err);
   } finally {
     loading.value = false;
   }
@@ -36,7 +57,7 @@ const onSubmit = async () => {
       <p style="text-align: center; color: #888; margin-bottom: 24px">LM Unity · Counsel</p>
       <el-form :model="form" label-position="top" @submit.prevent="onSubmit">
         <el-form-item label="租户 ID">
-          <el-input v-model="form.tenantId" placeholder="如 cuixxxxxx" />
+          <el-input v-model="form.tenantId" placeholder="如 cmqgxxxxxxxxxxxx" />
         </el-form-item>
         <el-form-item label="用户名">
           <el-input v-model="form.username" />
