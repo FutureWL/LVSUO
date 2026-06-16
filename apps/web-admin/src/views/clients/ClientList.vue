@@ -3,13 +3,11 @@ import http from '@/api/http';
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import type { Client, ClientType } from '@lm-unity/shared';
+import { useTable } from '@/composables/useTable';
+import TableEmpty from '@/components/TableEmpty.vue';
 
 const router = useRouter();
-const items = ref<Client[]>([]);
-const total = ref(0);
-const loading = ref(false);
-const page = ref(1);
-const pageSize = ref(20);
+const { items, total, page, pageSize, loading, empty, reload, resetAndLoad } = useTable<Client>({ url: '/clients' });
 
 const dialogVisible = ref(false);
 const form = ref({
@@ -21,17 +19,6 @@ const form = ref({
 });
 const saving = ref(false);
 
-async function load() {
-  loading.value = true;
-  try {
-    const res = await http.page<Client>('/clients', { page: page.value, pageSize: pageSize.value });
-    items.value = res.items;
-    total.value = res.total;
-  } finally {
-    loading.value = false;
-  }
-}
-
 function goDetail(row: Client) {
   router.push(`/clients/${row.id}`);
 }
@@ -42,13 +29,13 @@ async function create() {
     await http.post('/clients', form.value);
     dialogVisible.value = false;
     form.value = { clientName: '', clientType: 'INDIVIDUAL', contactName: '', contactMobile: '', contactEmail: '' };
-    await load();
+    reload();
   } finally {
     saving.value = false;
   }
 }
 
-onMounted(load);
+onMounted(() => resetAndLoad());
 </script>
 
 <template>
@@ -75,13 +62,16 @@ onMounted(load);
       <el-table-column prop="status" label="状态" width="100" />
       <el-table-column prop="createdAt" label="创建时间" width="180" />
     </el-table>
+
+    <TableEmpty v-if="empty" description="暂无客户" />
+
     <el-pagination
       v-model:current-page="page"
       v-model:page-size="pageSize"
       :total="total"
       layout="total, prev, pager, next"
       style="margin-top: 16px; justify-content: flex-end"
-      @current-change="load"
+      @current-change="reload"
     />
 
     <el-dialog v-model="dialogVisible" title="新建客户" width="500px">
