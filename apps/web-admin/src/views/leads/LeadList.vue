@@ -4,16 +4,16 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { LEAD_STATUS_NAME, LeadStatus, type Lead, type UrgencyLevel } from '@lm-unity/shared';
+import { useTable } from '@/composables/useTable';
+import TableEmpty from '@/components/TableEmpty.vue';
 
 const router = useRouter();
-const items = ref<Lead[]>([]);
-const total = ref(0);
-const loading = ref(false);
-const page = ref(1);
-const pageSize = ref(20);
-const keyword = ref('');
 
-// B2 筛选条件
+// 列表状态(分页/loading/empty 全在 composable 里)
+const { items, total, page, pageSize, loading, empty, reload, resetAndLoad } = useTable<Lead>({ url: '/leads' });
+
+// 搜索 + 筛选(由视图管理,load 时 merge 进 query)
+const keyword = ref('');
 const filterStatus = ref<LeadStatus | ''>('');
 const filterUrgency = ref<UrgencyLevel | ''>('');
 const filterDateRange = ref<[string, string] | null>(null);
@@ -30,6 +30,36 @@ const STATUS_OPTIONS = (Object.keys(LEAD_STATUS_NAME) as LeadStatus[]).map((s) =
   value: s,
 }));
 
+function buildParams() {
+  return {
+    keyword: keyword.value.trim() || undefined,
+    status: filterStatus.value || undefined,
+    urgency: filterUrgency.value || undefined,
+    from: filterDateRange.value?.[0],
+    to: filterDateRange.value?.[1],
+  };
+}
+
+function onSearch() {
+  resetAndLoad(buildParams());
+}
+
+function onReset() {
+  keyword.value = '';
+  filterStatus.value = '';
+  filterUrgency.value = '';
+  filterDateRange.value = null;
+  resetAndLoad(buildParams());
+}
+
+const hasFilter = () =>
+  !!keyword.value || !!filterStatus.value || !!filterUrgency.value || !!filterDateRange.value;
+
+function goDetail(row: Lead) {
+  router.push(`/leads/${row.id}`);
+}
+
+// 新建线索
 const dialogVisible = ref(false);
 const form = ref({
   sourceChannel: '',
@@ -41,59 +71,19 @@ const form = ref({
 });
 const saving = ref(false);
 
-async function load() {
-  loading.value = true;
-  try {
-    const res = await http.page<Lead>('/leads', {
-      page: page.value,
-      pageSize: pageSize.value,
-      keyword: keyword.value.trim() || undefined,
-      status: filterStatus.value || undefined,
-      urgency: filterUrgency.value || undefined,
-      from: filterDateRange.value?.[0],
-      to: filterDateRange.value?.[1],
-    });
-    items.value = res.items;
-    total.value = res.total;
-  } finally {
-    loading.value = false;
-  }
-}
-
-function onSearch() {
-  page.value = 1;
-  load();
-}
-
-function onReset() {
-  keyword.value = '';
-  filterStatus.value = '';
-  filterUrgency.value = '';
-  filterDateRange.value = null;
-  page.value = 1;
-  load();
-}
-
-const hasFilter = () =>
-  !!keyword.value || !!filterStatus.value || !!filterUrgency.value || !!filterDateRange.value;
-
-function goDetail(row: Lead) {
-  router.push(`/leads/${row.id}`);
-}
-
 async function create() {
   saving.value = true;
   try {
     await http.post('/leads', form.value);
     dialogVisible.value = false;
     form.value = { sourceChannel: '', clientName: '', contactMobile: '', contactEmail: '', legalIssueType: '', urgencyLevel: 'MEDIUM' };
-    await load();
+    reload();
   } finally {
     saving.value = false;
   }
 }
 
-onMounted(load);
+onMounted(() => resetAndLoad());
 </script>
 
 <template>
@@ -148,7 +138,14 @@ onMounted(load);
       <el-button type="primary" @click="onSearch">搜索</el-button>
       <el-button v-if="hasFilter()" @click="onReset">重置</el-button>
     </div>
-    <el-table v-loading="loading" :data="items" stripe style="margin-top: 16px" @row-click="goDetail">
+
+    <el-table
+      v-loading="loading"
+      :data="items"
+      stripe
+      style="margin-top: 16px"
+      @row-click="goDetail"
+    >
       <el-table-column prop="clientName" label="客户名称" />
       <el-table-column prop="sourceChannel" label="来源" width="120" />
       <el-table-column prop="legalIssueType" label="问题类型" width="160" />
@@ -160,13 +157,16 @@ onMounted(load);
       </el-table-column>
       <el-table-column prop="createdAt" label="创建时间" width="180" />
     </el-table>
+
+    <TableEmpty v-if="empty" description="暂无匹配的线索" />
+
     <el-pagination
       v-model:current-page="page"
       v-model:page-size="pageSize"
       :total="total"
       layout="total, prev, pager, next"
       style="margin-top: 16px; justify-content: flex-end"
-      @current-change="load"
+      @current-change="reload"
     />
 
     <el-dialog v-model="dialogVisible" title="新建线索" width="500px">
