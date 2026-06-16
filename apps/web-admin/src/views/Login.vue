@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, nextTick } from 'vue';
+import { ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import http from '@/api/http';
@@ -29,20 +29,6 @@ interface LoginResponse {
   };
 }
 
-const doRedirect = async (path: string) => {
-  // 关键:等 DOM/store 状态彻底稳定再导航
-  await nextTick();
-  // 双保险:用 named route 替代字符串路径,避免 path 解析歧义
-  const target = path === '/dashboard' ? { name: 'dashboard' } : path;
-  try {
-    await router.push(target);
-  } catch (err) {
-    console.error('[Login] router.push failed, fallback to location.href', err);
-    // 最后兜底:硬刷新跳转
-    window.location.href = path;
-  }
-};
-
 const onSubmit = async () => {
   if (loading.value) return;
   loading.value = true;
@@ -52,19 +38,35 @@ const onSubmit = async () => {
       ElMessage.error('登录响应异常:未拿到 accessToken');
       return;
     }
-    // 1. 先写 localStorage(同步)
+    // 1. 写 localStorage(同步)
     localStorage.setItem('lmsuo_token', res.accessToken);
-    // 2. 再 setAuth 更新 ref
+
+    // 2. 更新 Pinia store
     auth.setAuth(res.accessToken, res.user);
-    // 3. 验证 isAuthenticated
-    if (!auth.isAuthenticated) {
-      console.error('[Login] isAuthenticated is false after setAuth', { token: auth.token });
-      ElMessage.error('登录状态异常,请重试');
-      return;
-    }
+
+    // 3. 关键日志(便于排查)
+    console.log('[Login] success', {
+      role: res.user.role,
+      tenantId: res.user.tenantId,
+      isAuthenticated: auth.isAuthenticated,
+    });
+
     ElMessage.success('登录成功');
-    const redirect = (route.query.redirect as string) || '/dashboard';
-    await doRedirect(redirect);
+
+    // 4. 解析跳转目标
+    //    默认 /dashboard;若 URL 有 ?redirect=xxx 则跳到那里
+    const rawRedirect = route.query.redirect as string | undefined;
+    const target = rawRedirect && rawRedirect.startsWith('/') ? rawRedirect : '/dashboard';
+
+    console.log('[Login] redirecting to:', target);
+
+    // 5. 三重保险:route push + nextTick 兜底 + 硬刷新兜底
+    try {
+      await router.push(target);
+    } catch (navErr) {
+      console.warn('[Login] router.push failed, fallback to location.href', navErr);
+      window.location.href = target;
+    }
   } catch (err: any) {
     console.error('[Login] failed:', err);
   } finally {
