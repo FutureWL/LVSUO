@@ -24,6 +24,19 @@ class TransitionDto {
   @IsString() to!: MatterStatus;
 }
 
+class CreateFromQuoteDto {
+  @IsString() quoteId!: string;
+  @IsString() matterTitle!: string;
+  @IsOptional() @IsString() matterType?: string;
+  @IsOptional() @IsNumber() disputeAmount?: number;
+  @IsOptional() @IsIn(['L1_PUBLIC','L2_FIRM_INTERNAL','L3_MATTER_TEAM','L4_CLIENT_CONFIDENTIAL','L5_HIGHLY_CONFIDENTIAL','L6_AI_RESTRICTED'])
+  confidentialityLevel?: DataLevel;
+  @IsOptional() @IsString() responsiblePartnerId?: string;
+  @IsOptional() @IsString() leadLawyerId?: string;
+  @IsIn(['HOURLY', 'FIXED', 'CONTINGENT', 'RETAINER', 'HYBRID']) billingType!: 'HOURLY' | 'FIXED' | 'CONTINGENT' | 'RETAINER' | 'HYBRID';
+  @IsOptional() @IsNumber() budgetAmount?: number;
+}
+
 @ApiTags('matter')
 @ApiBearerAuth()
 @Controller('matters')
@@ -59,5 +72,16 @@ export class MatterController {
     @Body() dto: TransitionDto,
   ) {
     return this.matter.transition(user.tid, id, dto.to);
+  }
+
+  @Post('from-quote')
+  @RequirePerm({ action: 'matter:write' })
+  @Audit({ resourceType: 'matter' })
+  @ApiOperation({ summary: '从已确认报价创建案件' })
+  async createFromQuote(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: CreateFromQuoteDto,
+  ) {
+    return this.matter.createFromQuote(user.tid, dto.quoteId, dto);
   }
 }
