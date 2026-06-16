@@ -5,7 +5,9 @@
   "description": "LM Unity · Counsel NestJS 后端 API",
   "scripts": {
     "build": "nest build",
-    "dev": "nest start --watch",
+    "build:watch": "nest build --watch",
+    "dev": "nest build && node dist/main.js",
+    "dev:watch": "nest build --watch --preserveWatchOutput",
     "start": "node dist/main.js",
     "start:debug": "nest start --debug --watch",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --max-warnings=0",
