@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, nextTick } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
 import http from '@/api/http';
+import { ElMessage } from 'element-plus';
 
 const router = useRouter();
 const route = useRoute();
@@ -28,21 +29,43 @@ interface LoginResponse {
   };
 }
 
+const doRedirect = async (path: string) => {
+  // 关键:等 DOM/store 状态彻底稳定再导航
+  await nextTick();
+  // 双保险:用 named route 替代字符串路径,避免 path 解析歧义
+  const target = path === '/dashboard' ? { name: 'dashboard' } : path;
+  try {
+    await router.push(target);
+  } catch (err) {
+    console.error('[Login] router.push failed, fallback to location.href', err);
+    // 最后兜底:硬刷新跳转
+    window.location.href = path;
+  }
+};
+
 const onSubmit = async () => {
   if (loading.value) return;
   loading.value = true;
   try {
     const res = await http.post<LoginResponse>('/auth/login', form.value);
     if (!res || !res.accessToken) {
-      ElMessage.error('登录响应异常：未拿到 accessToken');
+      ElMessage.error('登录响应异常:未拿到 accessToken');
       return;
     }
+    // 1. 先写 localStorage(同步)
+    localStorage.setItem('lmsuo_token', res.accessToken);
+    // 2. 再 setAuth 更新 ref
     auth.setAuth(res.accessToken, res.user);
+    // 3. 验证 isAuthenticated
+    if (!auth.isAuthenticated) {
+      console.error('[Login] isAuthenticated is false after setAuth', { token: auth.token });
+      ElMessage.error('登录状态异常,请重试');
+      return;
+    }
     ElMessage.success('登录成功');
     const redirect = (route.query.redirect as string) || '/dashboard';
-    router.push(redirect);
+    await doRedirect(redirect);
   } catch (err: any) {
-    // 错误已由 http 拦截器弹过 toast，这里只防止 unhandled rejection
     console.error('[Login] failed:', err);
   } finally {
     loading.value = false;

@@ -54,8 +54,12 @@ const router = createRouter({
 
 router.beforeEach((to, _from, next) => {
   const auth = useAuthStore();
+  // 路由跳转前先同步 localStorage(防御刷新后 store 状态丢失)
+  auth.rehydrate();
   if (to.meta.public) return next();
-  if (!auth.isAuthenticated) return next({ name: 'login', query: { redirect: to.fullPath } });
+  if (!auth.isAuthenticated) {
+    return next({ name: 'login', query: { redirect: to.fullPath } });
+  }
   next();
 });
 
