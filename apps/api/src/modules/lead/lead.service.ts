@@ -23,15 +23,27 @@ export class LeadService {
     });
   }
 
-  async findByTenant(tenantId: string, page = 1, pageSize = 20): Promise<PageResponse<Lead>> {
+  async findByTenant(tenantId: string, page = 1, pageSize = 20, keyword?: string): Promise<PageResponse<Lead>> {
+    const trimmed = keyword?.trim();
+    const where = {
+      tenantId,
+      ...(trimmed
+        ? {
+            OR: [
+              { clientName: { contains: trimmed, mode: 'insensitive' as const } },
+              { contactMobile: { contains: trimmed, mode: 'insensitive' as const } },
+            ],
+          }
+        : {}),
+    };
     const [items, total] = await this.prisma.$transaction([
       this.prisma.lead.findMany({
-        where: { tenantId },
+        where,
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * pageSize,
         take: pageSize,
       }),
-      this.prisma.lead.count({ where: { tenantId } }),
+      this.prisma.lead.count({ where }),
     ]);
     return buildPage(items as unknown as Lead[], total, page, pageSize);
   }

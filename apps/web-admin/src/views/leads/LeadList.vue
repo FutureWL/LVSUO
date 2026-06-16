@@ -11,6 +11,7 @@ const total = ref(0);
 const loading = ref(false);
 const page = ref(1);
 const pageSize = ref(20);
+const keyword = ref('');
 
 const dialogVisible = ref(false);
 const form = ref({
@@ -26,12 +27,27 @@ const saving = ref(false);
 async function load() {
   loading.value = true;
   try {
-    const res = await http.page<Lead>('/leads', { page: page.value, pageSize: pageSize.value });
+    const res = await http.page<Lead>('/leads', {
+      page: page.value,
+      pageSize: pageSize.value,
+      keyword: keyword.value.trim() || undefined,
+    });
     items.value = res.items;
     total.value = res.total;
   } finally {
     loading.value = false;
   }
+}
+
+function onSearch() {
+  page.value = 1;
+  load();
+}
+
+function onReset() {
+  keyword.value = '';
+  page.value = 1;
+  load();
 }
 
 function goDetail(row: Lead) {
@@ -61,6 +77,18 @@ onMounted(load);
         <p style="color: #888">任务书 6.2 / 7.2 · 线索全生命周期</p>
       </div>
       <el-button type="primary" @click="dialogVisible = true">+ 新建线索</el-button>
+    </div>
+    <div style="margin-top: 16px; display: flex; gap: 8px; align-items: center">
+      <el-input
+        v-model="keyword"
+        placeholder="按客户名 / 手机号搜索"
+        clearable
+        style="width: 280px"
+        @keyup.enter="onSearch"
+        @clear="onReset"
+      />
+      <el-button type="primary" @click="onSearch">搜索</el-button>
+      <el-button v-if="keyword" @click="onReset">重置</el-button>
     </div>
     <el-table v-loading="loading" :data="items" stripe style="margin-top: 16px" @row-click="goDetail">
       <el-table-column prop="clientName" label="客户名称" />
