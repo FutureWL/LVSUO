@@ -1,7 +1,7 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import type { PrismaClient } from '@prisma/client';
 import { QuoteStatus } from '@lm-unity/shared';
 import { MatterService } from './matter.service';
+import { makePrismaMock } from '../../common/test/prisma-mock';
 
 /**
  * matter.service.createFromQuote 单测 —— 任务书 6.4 状态机入口
@@ -32,37 +32,22 @@ function makeQuoteRow(overrides: Partial<any> = {}) {
   };
 }
 
-function makePrisma(opts: { quote?: any | null; client?: any | null } = {}) {
-  const quote = opts.quote === undefined ? makeQuoteRow() : opts.quote;
-  const client = opts.client === undefined ? { id: CLIENT_ID, tenantId: TENANT_ID } : opts.client;
-
-  // matter.service.create 内部:
-  //   1. client.findFirst(校验 client 存在)
-  //   2. matter.count(查年计数生成 matterNo)
-  //   3. matter.create
-  const clientFindFirst = jest.fn().mockResolvedValue(client);
-  const matterCount = jest.fn().mockResolvedValue(0);
-  const matterCreate = jest
-    .fn()
-    .mockImplementation(({ data }) =>
-      Promise.resolve({ id: 'matter-1', tenantId: TENANT_ID, ...data }),
-    );
-  const feeQuoteUpdate = jest.fn().mockResolvedValue({ ...quote, matterId: 'matter-1' });
-  const feeQuoteFindFirst = jest.fn().mockResolvedValue(quote);
-
-  return {
-    feeQuote: {
-      findFirst: feeQuoteFindFirst,
-      update: feeQuoteUpdate,
-    },
-    client: {
-      findFirst: clientFindFirst,
-    },
-    matter: {
-      count: matterCount,
-      create: matterCreate,
-    },
-  } as unknown as PrismaClient;
+function makeServiceWithQuoteAndClient(
+  quoteOverride: any | null | undefined,
+  clientOverride: any | null | undefined = undefined,
+) {
+  const quoteRow = quoteOverride === undefined ? makeQuoteRow() : quoteOverride;
+  // client.findFirst 校验 client 存在;默认返回 client 行,clientOverride 可覆盖
+  const client =
+    clientOverride === undefined ? { id: CLIENT_ID, tenantId: TENANT_ID } : clientOverride;
+  const prisma = makePrismaMock({
+    'feeQuote.findFirst': quoteRow,
+    'feeQuote.update': { id: QUOTE_ID, matterId: 'matter-1' },
+    'client.findFirst': client,
+    'matter.count': 0,
+    'matter.create': ({ data }: any) => ({ id: 'matter-1', tenantId: TENANT_ID, ...data }),
+  });
+  return { service: new MatterService(prisma), prisma };
 }
 
 const validInput = {
@@ -79,8 +64,7 @@ const validInput = {
 describe('MatterService.createFromQuote', () => {
   describe('quote 查找', () => {
     it('quote 不存在 → NotFoundException', async () => {
-      const prisma = makePrisma({ quote: null });
-      const service = new MatterService(prisma);
+      const { service } = makeServiceWithQuoteAndClient(null);
       await expect(service.createFromQuote(TENANT_ID, QUOTE_ID, validInput)).rejects.toThrow(
         NotFoundException,
       );
@@ -89,8 +73,9 @@ describe('MatterService.createFromQuote', () => {
 
   describe('quote 状态门禁', () => {
     it('DRAFT → BadRequest "报价未确认"', async () => {
-      const prisma = makePrisma({ quote: makeQuoteRow({ status: QuoteStatus.DRAFT }) });
-      const service = new MatterService(prisma);
+      const { service } = makeServiceWithQuoteAndClient(
+        makeQuoteRow({ status: QuoteStatus.DRAFT }),
+      );
       try {
         await service.createFromQuote(TENANT_ID, QUOTE_ID, validInput);
         throw new Error('应抛错');
@@ -102,24 +87,25 @@ describe('MatterService.createFromQuote', () => {
     });
 
     it('PENDING_APPROVAL → BadRequest', async () => {
-      const prisma = makePrisma({ quote: makeQuoteRow({ status: QuoteStatus.PENDING_APPROVAL }) });
-      const service = new MatterService(prisma);
+      const { service } = makeServiceWithQuoteAndClient(
+        makeQuoteRow({ status: QuoteStatus.PENDING_APPROVAL }),
+      );
       await expect(service.createFromQuote(TENANT_ID, QUOTE_ID, validInput)).rejects.toThrow(
         BadRequestException,
       );
     });
 
     it('SENT → BadRequest', async () => {
-      const prisma = makePrisma({ quote: makeQuoteRow({ status: QuoteStatus.SENT }) });
-      const service = new MatterService(prisma);
+      const { service } = makeServiceWithQuoteAndClient(makeQuoteRow({ status: QuoteStatus.SENT }));
       await expect(service.createFromQuote(TENANT_ID, QUOTE_ID, validInput)).rejects.toThrow(
         BadRequestException,
       );
     });
 
     it('REJECTED → BadRequest', async () => {
-      const prisma = makePrisma({ quote: makeQuoteRow({ status: QuoteStatus.REJECTED }) });
-      const service = new MatterService(prisma);
+      const { service } = makeServiceWithQuoteAndClient(
+        makeQuoteRow({ status: QuoteStatus.REJECTED }),
+      );
       await expect(service.createFromQuote(TENANT_ID, QUOTE_ID, validInput)).rejects.toThrow(
         BadRequestException,
       );
@@ -128,10 +114,9 @@ describe('MatterService.createFromQuote', () => {
 
   describe('quote 关联客户门禁', () => {
     it('CLIENT_CONFIRMED 但 clientId=null → BadRequest "未关联客户"', async () => {
-      const prisma = makePrisma({
-        quote: makeQuoteRow({ status: QuoteStatus.CLIENT_CONFIRMED, clientId: null }),
-      });
-      const service = new MatterService(prisma);
+      const { service } = makeServiceWithQuoteAndClient(
+        makeQuoteRow({ status: QuoteStatus.CLIENT_CONFIRMED, clientId: null }),
+      );
       try {
         await service.createFromQuote(TENANT_ID, QUOTE_ID, validInput);
         throw new Error('应抛错');
@@ -141,10 +126,9 @@ describe('MatterService.createFromQuote', () => {
     });
 
     it('APPROVED 但 clientId=null → 同样 BadRequest', async () => {
-      const prisma = makePrisma({
-        quote: makeQuoteRow({ status: QuoteStatus.APPROVED, clientId: null }),
-      });
-      const service = new MatterService(prisma);
+      const { service } = makeServiceWithQuoteAndClient(
+        makeQuoteRow({ status: QuoteStatus.APPROVED, clientId: null }),
+      );
       await expect(service.createFromQuote(TENANT_ID, QUOTE_ID, validInput)).rejects.toThrow(
         BadRequestException,
       );
@@ -153,8 +137,7 @@ describe('MatterService.createFromQuote', () => {
 
   describe('happy path', () => {
     it('CLIENT_CONFIRMED + 有 clientId → 调 create + 关联 quote.matterId', async () => {
-      const prisma = makePrisma();
-      const service = new MatterService(prisma);
+      const { service, prisma } = makeServiceWithQuoteAndClient();
       const matter = await service.createFromQuote(TENANT_ID, QUOTE_ID, validInput);
 
       // 1. client.findFirst 用 quote.clientId 校验
@@ -191,18 +174,16 @@ describe('MatterService.createFromQuote', () => {
     });
 
     it('APPROVED + 有 clientId → 同样走通', async () => {
-      const prisma = makePrisma({
-        quote: makeQuoteRow({ status: QuoteStatus.APPROVED }),
-      });
-      const service = new MatterService(prisma);
+      const { service } = makeServiceWithQuoteAndClient(
+        makeQuoteRow({ status: QuoteStatus.APPROVED }),
+      );
       const matter = await service.createFromQuote(TENANT_ID, QUOTE_ID, validInput);
       expect(matter.id).toBe('matter-1');
     });
 
     it('client 不存在(被 service.create 兜底拦下)→ NotFoundException', async () => {
       // quote 有 clientId,但 prisma.client.findFirst 找不到(被同租户另一个删了之类)
-      const prisma = makePrisma({ client: null });
-      const service = new MatterService(prisma);
+      const { service, prisma } = makeServiceWithQuoteAndClient(undefined, null);
       await expect(service.createFromQuote(TENANT_ID, QUOTE_ID, validInput)).rejects.toThrow(
         NotFoundException,
       );

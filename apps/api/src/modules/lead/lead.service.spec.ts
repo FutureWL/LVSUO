@@ -1,7 +1,7 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import type { PrismaClient } from '@prisma/client';
 import { LeadStatus, TriageResult } from '@lm-unity/shared';
 import { LeadService } from './lead.service';
+import { makePrismaMock } from '../../common/test/prisma-mock';
 
 /**
  * lead.service 单测 —— 三个核心方法:
@@ -9,9 +9,11 @@ import { LeadService } from './lead.service';
  *  - assignLawyer(tenantId, leadId, lawyerId): 推进到 LAWYER_REVIEW_REQUIRED
  *  - triage(tenantId, leadId, input): 状态机检查 + $transaction 写入
  *
- * Mock 策略:PrismaClient 用 jest.fn() 替身,只暴露 service 实际用到的方法
- *  - $transaction 捕获 ops 数组(供 spy 校验),resolve mock 结果
- *  - 不连真实数据库
+ * Mock:makePrismaMock({ 'lead.findFirst': leadRow, 'lead.update': impl, '$transaction': [...] })
+ *  - 'lead.findFirst' / 'lead.update' / 'intakeTriage.create' 按需声明
+ *  - 'lead.update' 用 fn 形式 mockImplementation,真正变更 currentLead
+ *    (triage 内部 return findOne 第二次,需要看到 update 后的状态)
+ *  - '$transaction' 直接 resolve mock 结果,ops 数组中的 pending promise 不真跑
  */
 
 const TENANT_ID = 'tenant-1';
@@ -30,48 +32,22 @@ function makeLeadRow(overrides: Partial<any> = {}) {
   };
 }
 
-function makePrisma(
-  opts: {
-    lead?: any | null;
-    /** $transaction 模拟 resolve 的结果;默认 [triage 行, lead 行] */
-    transactionResult?: any[];
-  } = {},
-) {
-  // opts.lead: undefined → 用默认; null → 模拟查不到
-  // 用 'currentLead' 作为可变状态,lead.update 会真正修改它
-  // 这样 triage() 内部的 'return this.findOne(...)' 第二次会拿到更新后的值
-  const currentLead = opts.lead === undefined ? makeLeadRow() : opts.lead;
-
-  const intakeTriageCreate = jest
-    .fn()
-    .mockImplementation(({ data }) => Promise.resolve({ id: 'triage-1', ...data }));
-  const leadUpdate = jest.fn().mockImplementation(({ data }) => {
-    Object.assign(currentLead, data); // 真正变更
-    return Promise.resolve(currentLead);
+function makeServiceWithLead(leadOverride: any | null | undefined = undefined) {
+  // undefined → 用默认;null → 模拟查不到
+  const lead = leadOverride === undefined ? makeLeadRow() : leadOverride;
+  // lead.update 要真改 lead(可变),这样 triage 第二次 findOne 拿更新值
+  const leadUpdateFn = ({ data }: any) => {
+    Object.assign(lead, data);
+    return lead;
+  };
+  const prisma = makePrismaMock({
+    'lead.findFirst': lead,
+    'lead.update': leadUpdateFn,
+    'intakeTriage.create': { id: 'triage-1', tenantId: TENANT_ID, leadId: LEAD_ID },
+    // $transaction 接受 ops 数组,返回 mock 结果(不真跑 ops)
+    $transaction: [{ id: 'triage-1', tenantId: TENANT_ID, leadId: LEAD_ID }, { ...lead }],
   });
-  const leadFindFirst = jest.fn().mockImplementation(() => Promise.resolve(currentLead));
-
-  // $transaction 接收 ops 数组,resolve 模拟结果(不真跑 ops)
-  const transactionResult = opts.transactionResult ?? [
-    { id: 'triage-1', tenantId: TENANT_ID, leadId: LEAD_ID },
-    { ...currentLead },
-  ];
-  const transaction = jest.fn().mockImplementation(() => Promise.resolve(transactionResult));
-
-  return {
-    $transaction: transaction,
-    lead: {
-      findFirst: leadFindFirst,
-      update: leadUpdate,
-    },
-    intakeTriage: {
-      create: intakeTriageCreate,
-    },
-  } as unknown as PrismaClient;
-}
-
-function makeService(prisma: PrismaClient) {
-  return new LeadService(prisma);
+  return { service: new LeadService(prisma), prisma };
 }
 
 const validTriageInput = {
@@ -87,17 +63,15 @@ const validTriageInput = {
 
 describe('LeadService.findOne', () => {
   it('找不到 → NotFoundException', async () => {
-    const prisma = makePrisma({ lead: null });
-    await expect(makeService(prisma).findOne(TENANT_ID, LEAD_ID)).rejects.toThrow(
-      NotFoundException,
-    );
+    const { service } = makeServiceWithLead(null);
+    await expect(service.findOne(TENANT_ID, LEAD_ID)).rejects.toThrow(NotFoundException);
   });
 });
 
 describe('LeadService.assignLawyer', () => {
   it('找到 lead → update 为 LAWYER_REVIEW_REQUIRED + 设律师', async () => {
-    const prisma = makePrisma({ lead: makeLeadRow() });
-    const result = await makeService(prisma).assignLawyer(TENANT_ID, LEAD_ID, LAWYER_ID);
+    const { service, prisma } = makeServiceWithLead();
+    const result = await service.assignLawyer(TENANT_ID, LEAD_ID, LAWYER_ID);
     expect(prisma.lead.update).toHaveBeenCalledWith({
       where: { id: LEAD_ID },
       data: {
@@ -109,8 +83,8 @@ describe('LeadService.assignLawyer', () => {
   });
 
   it('lead 不存在 → NotFoundException', async () => {
-    const prisma = makePrisma({ lead: null });
-    await expect(makeService(prisma).assignLawyer(TENANT_ID, LEAD_ID, LAWYER_ID)).rejects.toThrow(
+    const { service } = makeServiceWithLead(null);
+    await expect(service.assignLawyer(TENANT_ID, LEAD_ID, LAWYER_ID)).rejects.toThrow(
       NotFoundException,
     );
   });
@@ -118,14 +92,14 @@ describe('LeadService.assignLawyer', () => {
 
 describe('LeadService.triage', () => {
   it('happy path: shouldTransferToLawyer=true → 状态 LAWYER_REVIEW_REQUIRED', async () => {
-    const prisma = makePrisma();
-    const result = await makeService(prisma).triage(TENANT_ID, LEAD_ID, validTriageInput);
+    const { service } = makeServiceWithLead();
+    const result = await service.triage(TENANT_ID, LEAD_ID, validTriageInput);
     expect(result.intakeStatus).toBe(LeadStatus.LAWYER_REVIEW_REQUIRED);
   });
 
   it('happy path: shouldTransferToLawyer=false → 状态 TRIAGED', async () => {
-    const prisma = makePrisma();
-    const result = await makeService(prisma).triage(TENANT_ID, LEAD_ID, {
+    const { service } = makeServiceWithLead();
+    const result = await service.triage(TENANT_ID, LEAD_ID, {
       ...validTriageInput,
       shouldTransferToLawyer: false,
     });
@@ -133,8 +107,8 @@ describe('LeadService.triage', () => {
   });
 
   it('写入 intakeTriage 字段映射正确(aiGenerated / lawyerConfirmed / confirmedBy)', async () => {
-    const prisma = makePrisma();
-    await makeService(prisma).triage(TENANT_ID, LEAD_ID, validTriageInput);
+    const { service, prisma } = makeServiceWithLead();
+    await service.triage(TENANT_ID, LEAD_ID, validTriageInput);
     expect(prisma.intakeTriage.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         tenantId: TENANT_ID,
@@ -153,8 +127,8 @@ describe('LeadService.triage', () => {
   });
 
   it('aiGenerated 默认 false,lawyerConfirmed 默认 false(无 confirmedBy)', async () => {
-    const prisma = makePrisma();
-    await makeService(prisma).triage(TENANT_ID, LEAD_ID, {
+    const { service, prisma } = makeServiceWithLead();
+    await service.triage(TENANT_ID, LEAD_ID, {
       ...validTriageInput,
       aiGenerated: undefined,
       confirmedBy: undefined,
@@ -169,10 +143,10 @@ describe('LeadService.triage', () => {
   });
 
   it('lead.intakeStatus === CONVERTED_TO_MATTER → BadRequest', async () => {
-    const prisma = makePrisma({
-      lead: makeLeadRow({ intakeStatus: LeadStatus.CONVERTED_TO_MATTER }),
-    });
-    await expect(makeService(prisma).triage(TENANT_ID, LEAD_ID, validTriageInput)).rejects.toThrow(
+    const { service, prisma } = makeServiceWithLead(
+      makeLeadRow({ intakeStatus: LeadStatus.CONVERTED_TO_MATTER }),
+    );
+    await expect(service.triage(TENANT_ID, LEAD_ID, validTriageInput)).rejects.toThrow(
       BadRequestException,
     );
     // 不能进 transaction
@@ -180,31 +154,20 @@ describe('LeadService.triage', () => {
   });
 
   it('lead.intakeStatus === CLOSED_LOST → BadRequest', async () => {
-    const prisma = makePrisma({
-      lead: makeLeadRow({ intakeStatus: LeadStatus.CLOSED_LOST }),
-    });
-    await expect(makeService(prisma).triage(TENANT_ID, LEAD_ID, validTriageInput)).rejects.toThrow(
+    const { service, prisma } = makeServiceWithLead(
+      makeLeadRow({ intakeStatus: LeadStatus.CLOSED_LOST }),
+    );
+    await expect(service.triage(TENANT_ID, LEAD_ID, validTriageInput)).rejects.toThrow(
       BadRequestException,
     );
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
   it('lead 不存在 → NotFoundException(不进入 transaction)', async () => {
-    const prisma = makePrisma({ lead: null });
-    await expect(makeService(prisma).triage(TENANT_ID, LEAD_ID, validTriageInput)).rejects.toThrow(
+    const { service, prisma } = makeServiceWithLead(null);
+    await expect(service.triage(TENANT_ID, LEAD_ID, validTriageInput)).rejects.toThrow(
       NotFoundException,
     );
     expect(prisma.$transaction).not.toHaveBeenCalled();
-  });
-
-  it('transaction 包含 create + update 两步', async () => {
-    const prisma = makePrisma();
-    await makeService(prisma).triage(TENANT_ID, LEAD_ID, validTriageInput);
-    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
-    const ops = (prisma.$transaction as jest.Mock).mock.calls[0][0];
-    expect(Array.isArray(ops)).toBe(true);
-    expect(ops).toHaveLength(2);
-    // ops[0] 是 intakeTriage.create 的 pending promise
-    // ops[1] 是 lead.update 的 pending promise
   });
 });

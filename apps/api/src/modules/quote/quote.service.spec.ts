@@ -1,7 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
-import type { PrismaClient } from '@prisma/client';
 import { ErrorCode } from '@lm-unity/shared';
 import { QuoteService } from './quote.service';
+import { makePrismaMock } from '../../common/test/prisma-mock';
 
 /**
  * quote.service.create 单测 —— 重点验证'validate → prisma.create'的串联
@@ -11,17 +11,12 @@ import { QuoteService } from './quote.service';
 
 const TENANT_ID = 'tenant-1';
 
-function makePrisma() {
-  const feeQuoteCreate = jest
-    .fn()
-    .mockImplementation(({ data }) =>
-      Promise.resolve({ id: 'quote-1', tenantId: TENANT_ID, ...data }),
-    );
-  return {
-    feeQuote: {
-      create: feeQuoteCreate,
-    },
-  } as unknown as PrismaClient & { feeQuote: { create: jest.Mock } };
+function makeService() {
+  const prisma = makePrismaMock({
+    // create 返回 quote 行(id 自动 + 入参 data)
+    'feeQuote.create': ({ data }: any) => ({ id: 'quote-1', tenantId: TENANT_ID, ...data }),
+  });
+  return { service: new QuoteService(prisma), prisma };
 }
 
 const validInput = {
@@ -30,11 +25,6 @@ const validInput = {
   thirdPartyCosts: [{ category: '法院', amount: 500 }],
   riskDisclosureConfirmed: true,
 };
-
-function makeService() {
-  const prisma = makePrisma();
-  return { service: new QuoteService(prisma), prisma };
-}
 
 describe('QuoteService.create', () => {
   it('合法输入 → prisma.feeQuote.create 被调用且字段映射正确', async () => {
@@ -120,7 +110,7 @@ describe('QuoteService.create', () => {
   it('可选字段未传时,prisma.create 收到的 data 中该字段是 undefined(不传空值)', async () => {
     const { service, prisma } = makeService();
     await service.create(TENANT_ID, validInput as any);
-    const call = prisma.feeQuote.create.mock.calls[0][0];
+    const call = (prisma.feeQuote.create as jest.Mock).mock.calls[0][0];
     expect(call.data.leadId).toBeUndefined();
     expect(call.data.clientId).toBeUndefined();
     expect(call.data.matterId).toBeUndefined();
@@ -131,7 +121,7 @@ describe('QuoteService.create', () => {
   it('新创建的状态固定为 DRAFT + clientConfirmed=false(服务侧强制)', async () => {
     const { service, prisma } = makeService();
     await service.create(TENANT_ID, validInput as any);
-    const call = prisma.feeQuote.create.mock.calls[0][0];
+    const call = (prisma.feeQuote.create as jest.Mock).mock.calls[0][0];
     expect(call.data.status).toBe('DRAFT');
     expect(call.data.clientConfirmed).toBe(false);
   });
