@@ -15,6 +15,7 @@ import { LeadModule } from './modules/lead/lead.module';
 import { ProductModule } from './modules/product/product.module';
 import { QuoteModule } from './modules/quote/quote.module';
 import { MatterModule } from './modules/matter/matter.module';
+import { ClientModule } from './modules/client/client.module';
 import { ConversationModule } from './modules/conversation/conversation.module';
 import { TimeEntryModule } from './modules/time-entry/time-entry.module';
 import { KnowledgeCardModule } from './modules/knowledge-card/knowledge-card.module';
@@ -45,6 +46,7 @@ import { GlobalExceptionFilter } from './common/filter/global-exception.filter';
     UserModule,
     TenantsModule,
     LeadModule,
+    ClientModule,
     ProductModule,
     QuoteModule,
     MatterModule,
