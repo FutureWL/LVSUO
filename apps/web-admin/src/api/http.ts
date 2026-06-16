@@ -3,8 +3,18 @@ import { ElMessage } from 'element-plus';
 import { useAuthStore } from '@/stores/auth';
 import router from '@/router';
 
+// baseURL 优先级: VITE_API_BASE > BASE_URL+'/api/counsel/v1' > '/api/counsel/v1'
+// BASE_URL 是 vite 的 base path(如 '/lvsuo/'),由 vite.config 的 base 决定
+function resolveBaseURL(): string {
+  const explicit = import.meta.env.VITE_API_BASE;
+  if (explicit) return explicit;
+  const base = import.meta.env.BASE_URL || '/';
+  // base 通常以 / 结尾,拼接 api/counsel/v1
+  return `${base.replace(/\/+$/, '')}/api/counsel/v1`;
+}
+
 const instance: AxiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE || '/api/counsel/v1',
+  baseURL: resolveBaseURL(),
   timeout: 30000,
 });
 

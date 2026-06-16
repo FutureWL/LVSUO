@@ -138,6 +138,7 @@ pnpm dev
 - 📔 [后端 API README](./apps/api/README.md)
 - 📄 [律所管理端 README](./apps/web-admin/README.md)
 - ⚙️ [本地基础设施 README](./infra/README.md)
+- 🌐 [Nginx 子目录反向代理部署指南](./infra/nginx/README.md)
 
 ## 战略使命
 
@@ -148,3 +149,52 @@ pnpm dev
 ---
 
 **内部使用** · © FutureWL 律师事务所 · [任务书 V3.0](./docs/00-产品定义/开发任务书V3.0.md)
+
+---
+
+## 部署选项
+
+### A. 开发模式(Vite + HMR)· 推荐迭代
+
+`https://wxf-prod.huntercat.cn/lvsuo/` → `http://localhost:5173/lvsuo/`(vite dev)
+
+详见 [`infra/nginx/lvsuo.conf`](./infra/nginx/lvsuo.conf) 与 [部署指南](./infra/nginx/README.md)
+
+```bash
+# 本地启动 vite dev
+cd /root/DataDisk/workspace/LVSUO/apps/web-admin
+cat > .env << 'EOF'
+VITE_BASE_PATH=/lvsuo/
+VITE_API_PROXY_TARGET=http://localhost:3001
+EOF
+python3 -c "
+import os; pid = os.fork()
+if pid > 0: os._exit(0)
+os.setsid(); os.chdir('/root/DataDisk/workspace/LVSUO/apps/web-admin')
+sin = open('/dev/null','r'); sout = open('/tmp/lmsuo-web.log','wb')
+os.dup2(sin.fileno(),0); os.dup2(sout.fileno(),1); os.dup2(sout.fileno(),2)
+os.execvp('pnpm', ['pnpm','dev'])
+"
+
+# nginx 配置
+sudo cp infra/nginx/lvsuo.conf /etc/nginx/sites-enabled/lvsuo.conf
+sudo nginx -t && sudo nginx -s reload
+```
+
+### B. 生产模式(直接 serve dist)· 推荐发布
+
+`https://wxf-prod.huntercat.cn/lvsuo/` → 直接 serve `dist/` + API 代理到 3001
+
+详见 [`infra/nginx/lvsuo-production.conf`](./infra/nginx/lvsuo-production.conf)
+
+```bash
+VITE_BASE_PATH=/lvsuo/ pnpm --filter @lm-unity/web-admin build
+sudo cp infra/nginx/lvsuo-production.conf /etc/nginx/sites-enabled/lvsuo.conf
+sudo nginx -t && sudo nginx -s reload
+```
+
+### 验证配置语法
+
+```bash
+sudo bash infra/nginx/test.sh both   # 同时测试 dev + prod
+```

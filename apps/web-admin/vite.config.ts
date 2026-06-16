@@ -8,6 +8,10 @@ import path from 'node:path';
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   return {
+    // 部署在 https://wxf-prod.huntercat.cn/lvsuo/ 子路径下
+    // 告诉 Vite 所有资源(HMTL/CSS/JS/HMR)都从 /lvsuo/ 出发
+    base: env.VITE_BASE_PATH || '/',
+
     plugins: [
       vue(),
       AutoImport({
@@ -29,18 +33,17 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 5173,
       proxy: {
+        // 直接访问 vite 时的 API 代理(走 nginx 时不会经过这里)
         '/api': {
           target: env.VITE_API_PROXY_TARGET || 'http://localhost:3000',
           changeOrigin: true,
         },
       },
       hmr: {
-        // 不重启服务器，保留状态
         overlay: false,
       },
     },
     optimizeDeps: {
-      // 预打包，避免运行时重新优化导致服务器重启
       include: [
         'element-plus',
         'element-plus/es/components/message/style/css',
