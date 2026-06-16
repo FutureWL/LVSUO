@@ -206,15 +206,19 @@ describe('useAuthStore', () => {
       expect(auth.user?.id).toBe(SAMPLE_USER.id);
     });
 
-    it('localStorage 脏数据(非 JSON)→ 静默吞掉,user 不变', () => {
+    it('localStorage 脏数据(非 JSON)→ loadStoredUser 返回 null,store user 同步清掉', () => {
       const auth = useAuthStore();
       auth.setAuth('jwt', SAMPLE_USER);
       // 另一个标签页写脏数据
       localStorage.setItem('lmsuo_user', 'not-json{{');
       auth.rehydrate();
-      // loadStoredUser 内部 catch + removeItem,user 保持不变
-      expect(auth.user).toEqual(SAMPLE_USER);
+      // loadStoredUser catch + removeItem,返回 null
+      // rehydrate 检测到 store.user.id !== null.id(都是 undefined 但 !==), 设置为 null
+      expect(auth.user).toBeNull();
+      // 清理胜出:localStorage 里也被清
       expect(localStorage.getItem('lmsuo_user')).toBeNull();
+      // token 不动(本地 token 仍是合法值,只是 user JSON 损坏)
+      expect(auth.token).toBe('jwt');
     });
 
     it('多 tab 同步场景:另一个 tab 改了 user id,rehydrate 拉新', () => {
@@ -240,6 +244,42 @@ describe('useAuthStore', () => {
       auth.rehydrate();
       expect(auth.token).toBe(t1);
       expect(auth.user).toBe(u1);
+    });
+
+    it('多 tab logout 场景:localStorage 删 token,rehydrate 同步清 store', () => {
+      // 场景: tab A 登出后,localStorage token 被删
+      //  tab B 路由跳转时 rehydrate(), 应检测到 token 变化,清空 store
+      // 修复前这个测试会失败(rehydrate 不清 store token)
+      const auth = useAuthStore();
+      auth.setAuth('jwt-tab-a', SAMPLE_USER);
+      // 模拟 tab A 登出
+      localStorage.removeItem('lmsuo_token');
+      localStorage.removeItem('lmsuo_user');
+      // tab B 路由跳转
+      auth.rehydrate();
+      expect(auth.token).toBeNull();
+      expect(auth.user).toBeNull();
+      expect(auth.isAuthenticated).toBe(false);
+    });
+
+    it('多 tab token 替换场景:localStorage 换 token,rehydrate 同步', () => {
+      // 场景: tab A 重新登录后 token 变了,tab B rehydrate 拿新 token
+      const auth = useAuthStore();
+      auth.setAuth('jwt-old', SAMPLE_USER);
+      localStorage.setItem('lmsuo_token', 'jwt-new');
+      auth.rehydrate();
+      expect(auth.token).toBe('jwt-new');
+    });
+
+    it('多 tab user 替换场景:localStorage user.id 变,rehydrate 同步', () => {
+      // 已存在用例:但还该验证不重置 token
+      const auth = useAuthStore();
+      auth.setAuth('jwt', SAMPLE_USER);
+      const newUser = { ...SAMPLE_USER, id: 'new-id' };
+      localStorage.setItem('lmsuo_user', JSON.stringify(newUser));
+      auth.rehydrate();
+      expect(auth.user?.id).toBe('new-id');
+      expect(auth.token).toBe('jwt'); // token 没变
     });
   });
 });

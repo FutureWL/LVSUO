@@ -52,14 +52,18 @@ export const useAuthStore = defineStore('auth', () => {
   /**
    * 同步从 localStorage 重新加载 token 和用户信息
    * 用于页面刷新后 store 状态与 localStorage 同步
+   *
+   * 多 tab 同步场景: 另一个 tab logout 后,本 tab rehydrate 应清空 store
+   *  - 用 !== 比较,允许 t 或 u 为 null(表示已登出)
+   *  - 旧的 if (t && t !== ...) 在 localStorage 没 token 时不会清 store, 是 bug
    */
   function rehydrate() {
     const t = localStorage.getItem(TOKEN_KEY);
-    if (t && t !== token.value) {
+    if (t !== token.value) {
       token.value = t;
     }
     const u = loadStoredUser();
-    if (u && (!user.value || u.id !== user.value.id)) {
+    if (!user.value || u?.id !== user.value.id) {
       user.value = u;
     }
   }
