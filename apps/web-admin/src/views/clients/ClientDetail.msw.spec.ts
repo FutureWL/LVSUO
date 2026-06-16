@@ -1,9 +1,8 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
-import { setActivePinia, createPinia } from 'pinia';
-import { mount, flushPromises } from '@vue/test-utils';
-import { defineComponent, h } from 'vue';
-import { createRouter, createMemoryHistory, type Router } from 'vue-router';
+import { flushPromises } from '@vue/test-utils';
+import { mountView, makeTestRouter } from '@/test/view-test-helpers';
+import { type Router } from 'vue-router';
 import { server, http, HttpResponse } from '@/test/msw';
 import ClientDetail from './ClientDetail.vue';
 
@@ -14,58 +13,6 @@ import ClientDetail from './ClientDetail.vue';
  *  - empty:matters 为空 → el-empty 显示"暂无关联案件"
  *  - 创建案件按钮 → router.push /matters/create?clientId=...
  */
-
-const ElStub = defineComponent({
-  name: 'ElStub',
-  setup(_props, { slots, attrs }) {
-    return () => h('div', { ...attrs, 'data-el-stub': true }, slots.default?.());
-  },
-});
-
-const ElTableStub = defineComponent({
-  name: 'ElTable',
-  props: ['data'],
-  setup(_props, { slots, attrs }) {
-    return () =>
-      h('div', { ...attrs, 'data-table': true }, [
-        slots.default?.(),
-        (_props.data || []).map((row: any) =>
-          h('div', { 'data-row': row.id, key: row.id }, row.matterNo ?? ''),
-        ),
-      ]);
-  },
-});
-
-const ElTableColumnStub = defineComponent({
-  name: 'ElTableColumn',
-  props: ['label', 'prop', 'width'],
-  setup(_props, { slots }) {
-    return () =>
-      h('label', { 'data-col': _props.prop ?? _props.label }, [
-        h('span', { class: 'col-label' }, _props.label ?? ''),
-        slots.default ? h('div', { class: 'col-body' }, slots.default({ row: {} })) : null,
-      ]);
-  },
-});
-
-const ElEmptyStub = defineComponent({
-  name: 'ElEmpty',
-  props: ['description'],
-  setup(props) {
-    return () => h('div', { 'data-el-empty': true }, props.description ?? '');
-  },
-});
-
-const components = {
-  ElButton: ElStub,
-  ElCard: ElStub,
-  ElTable: ElTableStub,
-  ElTableColumn: ElTableColumnStub,
-  ElTableColumn__: ElTableColumnStub,
-  ElEmpty: ElEmptyStub,
-  ElDescriptions: ElStub,
-  ElDescriptionsItem: ElStub,
-};
 
 const SAMPLE_CLIENT = {
   id: 'c1',
@@ -86,27 +33,20 @@ afterAll(() => server.close());
 afterEach(() => server.resetHandlers());
 
 beforeEach(async () => {
-  setActivePinia(createPinia());
-  localStorage.clear();
   vi.restoreAllMocks();
-  router = createRouter({
-    history: createMemoryHistory(),
-    routes: [
+  localStorage.clear();
+  router = await makeTestRouter(
+    [
       {
         path: '/clients/:id',
         name: 'client-detail',
         component: ClientDetail,
         meta: { public: true },
       },
-      {
-        path: '/matters/create',
-        name: 'matter-create',
-        component: { template: '<div>mcreate</div>' },
-      },
+      { path: '/matters/create', name: 'matter-create' },
     ],
-  });
-  await router.push('/clients/c1');
-  await router.isReady();
+    '/clients/c1',
+  );
 });
 
 async function mountDetail(mattersItems: any[] = []) {
@@ -121,10 +61,7 @@ async function mountDetail(mattersItems: any[] = []) {
       }),
     ),
   );
-  const w = mount(ClientDetail, { global: { plugins: [router], components } });
-  await flushPromises();
-  await flushPromises();
-  return w;
+  return await mountView(ClientDetail, { router });
 }
 
 describe('ClientDetail 端到端(MSW)', () => {
@@ -199,10 +136,7 @@ describe('ClientDetail 端到端(MSW)', () => {
         HttpResponse.json({ items: [], total: 0, page: 1, pageSize: 100 }),
       ),
     );
-    const w = mount(ClientDetail, { global: { plugins: [router], components } });
-    await flushPromises();
-    await flushPromises();
-    // 不崩
+    const w = await mountView(ClientDetail, { router });
     expect(w.text()).toContain('客户详情');
     expect((w.vm as any).client).toBeNull();
     expect((w.vm as any).loading).toBe(false);

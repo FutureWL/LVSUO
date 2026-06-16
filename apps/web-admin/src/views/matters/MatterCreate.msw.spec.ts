@@ -1,9 +1,8 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
-import { setActivePinia, createPinia } from 'pinia';
-import { mount, flushPromises } from '@vue/test-utils';
-import { defineComponent, h } from 'vue';
-import { createRouter, createMemoryHistory, type Router } from 'vue-router';
+import { flushPromises } from '@vue/test-utils';
+import { mountView, makeTestRouter } from '@/test/view-test-helpers';
+import { type Router } from 'vue-router';
 import { server, http, HttpResponse } from '@/test/msw';
 import MatterCreate from './MatterCreate.vue';
 
@@ -15,44 +14,6 @@ import MatterCreate from './MatterCreate.vue';
  *  - 500 → saving 回 false + 不跳
  *  - 报价列表过滤:只显示 CLIENT_CONFIRMED 且没 matterId 的
  */
-
-const ElStub = defineComponent({
-  name: 'ElStub',
-  setup(_props, { slots, attrs }) {
-    return () => h('div', { ...attrs, 'data-el-stub': true }, slots.default?.());
-  },
-});
-
-const ElSelectStub = defineComponent({
-  name: 'ElSelect',
-  props: ['modelValue', 'placeholder', 'disabled'],
-  setup(_props, { slots }) {
-    return () =>
-      h('div', { 'data-select': true, 'data-disabled': !!_props.disabled }, slots.default?.());
-  },
-});
-
-const ElOptionStub = defineComponent({
-  name: 'ElOption',
-  props: ['label', 'value'],
-  setup(_props) {
-    return () =>
-      h('div', { 'data-option': true, 'data-value': _props.value ?? '' }, _props.label ?? '');
-  },
-});
-
-const components = {
-  ElButton: ElStub,
-  ElInput: ElStub,
-  ElInputNumber: ElStub,
-  ElForm: ElStub,
-  ElFormItem: ElStub,
-  ElSelect: ElSelectStub,
-  ElOption: ElOptionStub,
-  ElRow: ElStub,
-  ElCol: ElStub,
-  ElCard: ElStub,
-};
 
 const SAMPLE_CLIENTS = [
   { id: 'c1', clientName: 'ABC 公司' },
@@ -81,13 +42,11 @@ afterAll(() => server.close());
 afterEach(() => server.resetHandlers());
 
 beforeEach(async () => {
-  setActivePinia(createPinia());
-  localStorage.clear();
   vi.restoreAllMocks();
-  router = createRouter({
-    history: createMemoryHistory(),
-    routes: [
-      { path: '/matters', name: 'matters', component: { template: '<div>list</div>' } },
+  localStorage.clear();
+  router = await makeTestRouter(
+    [
+      { path: '/matters', name: 'matters' },
       {
         path: '/matters/create',
         name: 'matter-create',
@@ -95,9 +54,8 @@ beforeEach(async () => {
         meta: { public: true },
       },
     ],
-  });
-  await router.push('/matters/create');
-  await router.isReady();
+    '/matters/create',
+  );
 });
 
 function mockLoad() {
@@ -111,11 +69,11 @@ function mockLoad() {
 }
 
 async function mountCreate(query: Record<string, string> = {}) {
-  await router.push({ name: 'matter-create', query });
-  const w = mount(MatterCreate, { global: { plugins: [router], components } });
-  await flushPromises();
-  await flushPromises();
-  return w;
+  if (Object.keys(query).length) {
+    await router.push({ name: 'matter-create', query });
+    await router.isReady();
+  }
+  return await mountView(MatterCreate, { router });
 }
 
 describe('MatterCreate 端到端(MSW)', () => {

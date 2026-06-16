@@ -1,8 +1,7 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
-import { setActivePinia, createPinia } from 'pinia';
-import { mount, flushPromises } from '@vue/test-utils';
-import { defineComponent, h } from 'vue';
+import { flushPromises } from '@vue/test-utils';
+import { mountView } from '@/test/view-test-helpers';
 import { server, http, HttpResponse } from '@/test/msw';
 import ClientList from './ClientList.vue';
 
@@ -14,67 +13,11 @@ import ClientList from './ClientList.vue';
  *  - 类型映射:ENTERPRISE → 企业 / INDIVIDUAL → 个人
  */
 
-const ElStub = defineComponent({
-  name: 'ElStub',
-  setup(_props, { slots, attrs }) {
-    return () => h('div', { ...attrs, 'data-el-stub': true }, slots.default?.());
-  },
-});
-
-const ElTableStub = defineComponent({
-  name: 'ElTable',
-  props: ['data'],
-  setup(_props, { slots, attrs }) {
-    return () =>
-      h('div', { ...attrs, 'data-table': true }, [
-        slots.default?.(),
-        (_props.data || []).map((row: any) =>
-          h('div', { 'data-row': row.id, key: row.id }, row.clientName ?? ''),
-        ),
-      ]);
-  },
-});
-
-const ElEmptyStub = defineComponent({
-  name: 'ElEmpty',
-  props: ['description'],
-  setup(props) {
-    return () => h('div', { 'data-el-empty': true }, props.description ?? '');
-  },
-});
-
-const components = {
-  ElButton: ElStub,
-  ElInput: ElStub,
-  ElSelect: ElStub,
-  ElOption: ElStub,
-  ElTable: ElTableStub,
-  ElTableColumn: defineComponent({
-    name: 'ElTableColumn',
-    props: ['label', 'prop', 'width'],
-    setup(_props, { slots }) {
-      return () =>
-        h('label', { 'data-col': _props.prop ?? _props.label }, [
-          h('span', { class: 'col-label' }, _props.label ?? ''),
-          // 传 row 给 slot(scope 模式)
-          slots.default ? h('div', { class: 'col-body' }, slots.default({ row: {} })) : null,
-        ]);
-    },
-  }),
-  ElTableColumn__: ElStub,
-  ElTag: ElStub,
-  ElPagination: ElStub,
-  ElDialog: ElStub,
-  ElForm: ElStub,
-  ElFormItem: ElStub,
-  ElEmpty: ElEmptyStub,
-};
-
 beforeAll(() => server.listen({ onUnhandledRequest: 'warn' }));
 afterAll(() => server.close());
 afterEach(() => server.resetHandlers());
 beforeEach(() => {
-  setActivePinia(createPinia());
+  vi.restoreAllMocks();
   localStorage.clear();
 });
 
@@ -98,10 +41,7 @@ const SAMPLE_CLIENTS = [
 ];
 
 async function mountList() {
-  const w = mount(ClientList, { global: { components } });
-  await flushPromises();
-  await flushPromises();
-  return w;
+  return await mountView(ClientList);
 }
 
 describe('ClientList 端到端(MSW)', () => {

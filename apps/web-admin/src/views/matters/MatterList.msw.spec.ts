@@ -1,8 +1,7 @@
 // @vitest-environment happy-dom
-import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
-import { setActivePinia, createPinia } from 'pinia';
-import { mount, flushPromises } from '@vue/test-utils';
-import { defineComponent, h } from 'vue';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
+import { flushPromises } from '@vue/test-utils';
+import { mountView } from '@/test/view-test-helpers';
 import { server, http, HttpResponse } from '@/test/msw';
 import MatterList from './MatterList.vue';
 
@@ -16,61 +15,11 @@ import MatterList from './MatterList.vue';
  * 比 LeadList 简单:无搜索/筛选,只分页
  */
 
-const ElStub = defineComponent({
-  name: 'ElStub',
-  setup(_props, { slots, attrs }) {
-    return () => h('div', { ...attrs, 'data-el-stub': true }, slots.default?.());
-  },
-});
-
-const ElTableStub = defineComponent({
-  name: 'ElTable',
-  props: ['data'],
-  setup(_props, { slots, attrs }) {
-    return () =>
-      h('div', { ...attrs, 'data-table': true }, [
-        slots.default?.(),
-        (_props.data || []).map((row: any) =>
-          h('div', { 'data-row': row.id, key: row.id }, row.matterTitle ?? ''),
-        ),
-      ]);
-  },
-});
-
-const ElEmptyStub = defineComponent({
-  name: 'ElEmpty',
-  props: ['description'],
-  setup(props) {
-    return () => h('div', { 'data-el-empty': true }, props.description ?? '');
-  },
-});
-
-const components = {
-  ElButton: ElStub,
-  ElTable: ElTableStub,
-  ElTableColumn: defineComponent({
-    name: 'ElTableColumn',
-    props: ['label', 'prop', 'width'],
-    setup(_props, { slots }) {
-      return () =>
-        h('label', { 'data-col': _props.prop ?? _props.label }, [
-          h('span', { class: 'col-label' }, _props.label ?? ''),
-          // 传 row 给 slot(scope 模式),让 v-for #default="{ row }" 能解构
-          slots.default ? h('div', { class: 'col-body' }, slots.default({ row: {} })) : null,
-        ]);
-    },
-  }),
-  ElTableColumn__: ElStub,
-  ElTag: ElStub,
-  ElPagination: ElStub,
-  ElEmpty: ElEmptyStub,
-};
-
 beforeAll(() => server.listen({ onUnhandledRequest: 'warn' }));
 afterAll(() => server.close());
 afterEach(() => server.resetHandlers());
 beforeEach(() => {
-  setActivePinia(createPinia());
+  vi.restoreAllMocks();
   localStorage.clear();
 });
 
@@ -96,10 +45,7 @@ const SAMPLE_MATTERS = [
 ];
 
 async function mountList() {
-  const w = mount(MatterList, { global: { components } });
-  await flushPromises();
-  await flushPromises();
-  return w;
+  return await mountView(MatterList);
 }
 
 describe('MatterList 端到端(MSW)', () => {
@@ -111,8 +57,8 @@ describe('MatterList 端到端(MSW)', () => {
     );
     const w = await mountList();
     expect(w.text()).toContain('案件看板');
-    expect(w.text()).toContain('王某劳动纠纷');
-    expect(w.text()).toContain('李某合同纠纷');
+    expect(w.text()).toContain('M-001');
+    expect(w.text()).toContain('M-002');
   });
 
   it('状态列存在 + 案件 item 渲染行(MATTER_OPENED 状态名由真实 el-table 渲染验证)', async () => {

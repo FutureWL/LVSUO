@@ -1,9 +1,8 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
-import { setActivePinia, createPinia } from 'pinia';
-import { mount, flushPromises } from '@vue/test-utils';
-import { defineComponent, h } from 'vue';
-import { createRouter, createMemoryHistory, type Router } from 'vue-router';
+import { flushPromises } from '@vue/test-utils';
+import { mountView, makeTestRouter } from '@/test/view-test-helpers';
+import { type Router } from 'vue-router';
 import { server, http, HttpResponse } from '@/test/msw';
 import LeadDetail from './LeadDetail.vue';
 
@@ -15,29 +14,6 @@ import LeadDetail from './LeadDetail.vue';
  *  - 转为客户:open → fill → POST /clients/convert-from-lead → reload
  *  - 创建报价 → router.push /quotes/create?leadId=...
  */
-
-const ElStub = defineComponent({
-  name: 'ElStub',
-  setup(_props, { slots, attrs }) {
-    return () => h('div', { ...attrs, 'data-el-stub': true }, slots.default?.());
-  },
-});
-
-const components = {
-  ElButton: ElStub,
-  ElDialog: ElStub,
-  ElSelect: ElStub,
-  ElOption: ElStub,
-  ElInput: ElStub,
-  ElForm: ElStub,
-  ElFormItem: ElStub,
-  ElRadio: ElStub,
-  ElRadioGroup: ElStub,
-  ElCheckbox: ElStub,
-  ElCard: ElStub,
-  ElDescriptions: ElStub,
-  ElDescriptionsItem: ElStub,
-};
 
 const SAMPLE_LEAD = {
   id: 'l1',
@@ -67,22 +43,15 @@ afterAll(() => server.close());
 afterEach(() => server.resetHandlers());
 
 beforeEach(async () => {
-  setActivePinia(createPinia());
-  localStorage.clear();
   vi.restoreAllMocks();
-  router = createRouter({
-    history: createMemoryHistory(),
-    routes: [
+  localStorage.clear();
+  router = await makeTestRouter(
+    [
       { path: '/leads/:id', name: 'lead-detail', component: LeadDetail, meta: { public: true } },
-      {
-        path: '/quotes/create',
-        name: 'quote-create',
-        component: { template: '<div>qcreate</div>' },
-      },
+      { path: '/quotes/create', name: 'quote-create' },
     ],
-  });
-  await router.push('/leads/l1');
-  await router.isReady();
+    '/leads/l1',
+  );
 });
 
 async function mountDetail() {
@@ -91,10 +60,7 @@ async function mountDetail() {
     http.get(/\/api\/users/, () => HttpResponse.json(SAMPLE_USERS)),
     http.get(/\/api\/service-products/, () => HttpResponse.json(SAMPLE_PRODUCTS)),
   );
-  const w = mount(LeadDetail, { global: { plugins: [router], components } });
-  await flushPromises();
-  await flushPromises();
-  return w;
+  return await mountView(LeadDetail, { router });
 }
 
 describe('LeadDetail 端到端(MSW)', () => {
@@ -196,12 +162,9 @@ describe('LeadDetail 端到端(MSW)', () => {
 
   it('创建报价 → router.push /quotes/create?leadId=l1', async () => {
     const w = await mountDetail();
-    // useRouter() 在 mount + plugins: [router] 后能拿到同一个 router
-    // 但 quoteForLead 内部 router.push 是异步,需要 await nextTick + flush
     await (w.vm as any).quoteForLead();
     await flushPromises();
     await flushPromises();
-    // router.currentRoute 是 ref,需要在 nextTick 后看
     expect(router.currentRoute.value.name).toBe('quote-create');
     expect(router.currentRoute.value.query.leadId).toBe('l1');
   });

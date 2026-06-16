@@ -3,7 +3,7 @@ import { mount, flushPromises } from '@vue/test-utils';
 import type { Component } from 'vue';
 import { defineComponent, h } from 'vue';
 import { setActivePinia, createPinia } from 'pinia';
-import type { Router } from 'vue-router';
+import { createRouter, createMemoryHistory, type Router, type RouteRecordRaw } from 'vue-router';
 
 /**
  * View 测试通用 helper
@@ -181,6 +181,39 @@ export async function mountView(component: Component, options: MountViewOptions 
   await flushPromises();
   await flushPromises();
   return wrapper;
+}
+
+/**
+ * 创建测试 router(memory history,隔离其他测试)
+ *  - 为每个 route 默认 component = { template: '<div data-stub-route />' }
+ *    除非要测跳转到的 route,再传真实 component
+ *  - 返回 isReady 的 router
+ *
+ * 例:
+ *   const router = await makeTestRouter([
+ *     { path: '/leads', name: 'leads', component: LeadList },
+ *     { path: '/leads/:id', name: 'lead-detail' },
+ *   ]);
+ *   await router.push('/leads');
+ */
+export type TestRoute = {
+  path: string;
+  name?: string;
+  component?: Component;
+  meta?: Record<string, unknown>;
+};
+
+export async function makeTestRouter(routes: TestRoute[], initialPath?: string): Promise<Router> {
+  const STUB: Component = { template: '<div data-stub-route />' };
+  const router = createRouter({
+    history: createMemoryHistory(),
+    routes: routes.map((r) => ({ ...r, component: r.component ?? STUB })) as RouteRecordRaw[],
+  });
+  if (initialPath) {
+    await router.push(initialPath);
+  }
+  await router.isReady();
+  return router;
 }
 
 /** 找页面中所有看起来像按钮的 stub 节点 */
