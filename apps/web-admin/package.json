@@ -17,7 +17,7 @@
     "@lm-unity/shared": "workspace:*",
     "axios": "^1.6.0",
     "element-plus": "^2.7.0",
-    "pinia": "^2.1.0",
+    "pinia": "^3.0.4",
     "vue": "^3.4.0",
     "vue-router": "^4.3.0"
   },
