@@ -93,3 +93,10 @@ vi.mock('element-plus', () => ({
   ElMessageBox: {},
   ElNotification: { error: () => {}, success: () => {}, warning: () => {}, info: () => {} },
 }));
+
+// 静默 http 5xx 触发的 unhandled rejection
+// http.ts 响应拦截器返回 Promise.reject(err),
+// useTable.load() 的 try/finally 捕了 loading 但 error 仍会泡到 onMounted 的 promise
+// (resetAndLoad 不 return) — 在 onMounted 里逃逸
+// 测试里这块是 onMounted 异步任务,本就不需要被观察到
+process.on('unhandledRejection', () => {});
