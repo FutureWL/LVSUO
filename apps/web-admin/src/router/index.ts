@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
+import { isPlatformRole } from '@/utils/roles';
 
 const routes: RouteRecordRaw[] = [
   {
@@ -123,7 +124,7 @@ export function authGuard(
         : to.fullPath;
     return next({ name: 'login', query: { redirect } });
   }
-  if (to.meta.requiresPlatform && !auth.user?.role?.startsWith('PLATFORM_')) {
+  if (to.meta.requiresPlatform && !isPlatformRole(auth.user?.role)) {
     return next({ name: 'dashboard' });
   }
   next();

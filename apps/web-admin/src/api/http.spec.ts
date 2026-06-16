@@ -90,6 +90,7 @@ describe('injectAuthHeader', () => {
 describe('handleResponseError', () => {
   let onUnauthorized: ReturnType<typeof vi.fn>;
   let showError: ReturnType<typeof vi.fn>;
+
   beforeEach(() => {
     onUnauthorized = vi.fn();
     showError = vi.fn();
@@ -139,5 +140,68 @@ describe('handleResponseError', () => {
   it('总是 reject 原 err(不包装新对象),便于调用方拿到 status/code', async () => {
     const err = { response: { status: 404, data: { code: 'X', message: 'y' } } };
     await expect(handleResponseError(err, { onUnauthorized, showError })).rejects.toBe(err);
+  });
+
+  describe('网络错误分支(更多边界)', () => {
+    it('axios 超时(timeout of Nms exceeded)→ network', async () => {
+      const err = { message: 'timeout of 30000ms exceeded' };
+      await expect(handleResponseError(err, { onUnauthorized, showError })).rejects.toBe(err);
+      expect(showError).toHaveBeenCalledWith('timeout of 30000ms exceeded');
+    });
+
+    it('Network Error 字符串 → network', async () => {
+      const err = { message: 'Network Error' };
+      await expect(handleResponseError(err, { onUnauthorized, showError })).rejects.toBe(err);
+      expect(showError).toHaveBeenCalledWith('Network Error');
+    });
+
+    it('带 axios 风格 code(ECONNABORTED)但无 response → network', async () => {
+      const err = { code: 'ECONNABORTED', message: 'Request aborted' };
+      await expect(handleResponseError(err, { onUnauthorized, showError })).rejects.toBe(err);
+      expect(showError).toHaveBeenCalledWith('Request aborted');
+    });
+
+    it('response.status = 0(浏览器层失败)→ other,toast 兜底 message', async () => {
+      // 有些环境 status 是 0 而非 undefined
+      const err = { response: { status: 0, data: {} } };
+      await expect(handleResponseError(err, { onUnauthorized, showError })).rejects.toBe(err);
+      // status 0 不在 KIND_BY_STATUS 表里 → 'other'
+      // data.message 缺,err.message 缺 → 走 classifyError 默认 '请求失败'
+      expect(showError).toHaveBeenCalledWith('请求失败');
+    });
+
+    it('response.data.message 空字符串(后端没给信息)→ toast 兜底', async () => {
+      const err = { response: { status: 500, data: { message: '' } } };
+      await expect(handleResponseError(err, { onUnauthorized, showError })).rejects.toBe(err);
+      // '' || undefined || '请求失败' → '请求失败'(empty string 是 falsy)
+      expect(showError).toHaveBeenCalledWith('请求失败');
+    });
+
+    it('response.data 缺 message → toast 空串(用 axios 默认 "Request failed")', async () => {
+      const err = { response: { status: 500, data: {} }, message: 'Request failed' };
+      await expect(handleResponseError(err, { onUnauthorized, showError })).rejects.toBe(err);
+      expect(showError).toHaveBeenCalledWith('Request failed');
+    });
+
+    it('完全空对象 err → toast axios err.message 或默认', async () => {
+      // 没有 message 也没有 response
+      const err = {};
+      await expect(handleResponseError(err, { onUnauthorized, showError })).rejects.toBe(err);
+      // 没有 message 也没有 data.message → '请求失败'(classifyError 默认)
+      expect(showError).toHaveBeenCalledWith('请求失败');
+    });
+
+    it('401 永远走 onUnauthorized,即使后端 message 很特别(防 toast 误导)', async () => {
+      const err = { response: { status: 401, data: { message: '账号被封禁' } } };
+      await expect(handleResponseError(err, { onUnauthorized, showError })).rejects.toBe(err);
+      expect(onUnauthorized).toHaveBeenCalled();
+      expect(showError).not.toHaveBeenCalled();
+    });
+
+    it('5xx + 后端 message 是英文 → 原样 toast(不翻译,用户能看懂就行)', async () => {
+      const err = { response: { status: 503, data: { message: 'Service Unavailable' } } };
+      await expect(handleResponseError(err, { onUnauthorized, showError })).rejects.toBe(err);
+      expect(showError).toHaveBeenCalledWith('Service Unavailable');
+    });
   });
 });
