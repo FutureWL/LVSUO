@@ -2,6 +2,7 @@ import axios, { type AxiosInstance, type AxiosResponse, type InternalAxiosReques
 import { ElMessage } from 'element-plus';
 import { useAuthStore } from '@/stores/auth';
 import router from '@/router';
+import type { PageResponse } from '@lm-unity/shared';
 
 // baseURL 优先级: VITE_API_BASE > BASE_URL+'/api' > '/api'
 // 与 nginx 的 /lvsuo/api/ 位置配合,由 nginx rewrite 拼上 /api/counsel/v1
@@ -70,6 +71,13 @@ const http = {
   },
   patch<T = unknown>(url: string, data?: any): Promise<T> {
     return instance.patch<T, T>(url, data);
+  },
+  /**
+   * 分页请求便捷方法。后端约定：GET <url>?page=&pageSize= → PageResponse<T>
+   *  示例: const { items, total } = await http.page<Lead>('/leads', { page: 1, pageSize: 20 })
+   */
+  page<T = unknown>(url: string, params: { page: number; pageSize: number; [k: string]: any }): Promise<PageResponse<T>> {
+    return instance.get<PageResponse<T>, PageResponse<T>>(url, { params });
   },
 };
 

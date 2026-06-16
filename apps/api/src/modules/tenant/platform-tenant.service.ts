@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
-import { DeploymentMode, TenantType } from '@lm-unity/shared';
+import { DeploymentMode, Tenant, TenantType, type PageResponse } from '@lm-unity/shared';
+import { buildPage } from '../../common/pagination';
 import * as bcrypt from 'bcryptjs';
 
 export interface CreateTenantInput {
@@ -29,7 +30,7 @@ export class PlatformTenantService {
   constructor(private readonly prisma: PrismaClient) {}
 
   /** 平台超管:列出所有租户 */
-  async listAll(page = 1, pageSize = 20, search?: string) {
+  async listAll(page = 1, pageSize = 20, search?: string): Promise<PageResponse<Tenant>> {
     const where = search
       ? { tenantName: { contains: search, mode: 'insensitive' as any } }
       : {};
@@ -45,7 +46,7 @@ export class PlatformTenantService {
       }),
       this.prisma.tenant.count({ where }),
     ]);
-    return { items, total, page, pageSize };
+    return buildPage(items as unknown as Tenant[], total, page, pageSize);
   }
 
   /** 平台超管:创建新租户 + 第一个管理员 */

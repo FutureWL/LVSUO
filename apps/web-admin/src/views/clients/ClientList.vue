@@ -2,11 +2,10 @@
 import http from '@/api/http';
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { ElMessage } from 'element-plus';
-import { LEAD_STATUS_NAME, type Lead } from '@lm-unity/shared';
+import type { Client, ClientType } from '@lm-unity/shared';
 
 const router = useRouter();
-const items = ref<Lead[]>([]);
+const items = ref<Client[]>([]);
 const total = ref(0);
 const loading = ref(false);
 const page = ref(1);
@@ -14,19 +13,18 @@ const pageSize = ref(20);
 
 const dialogVisible = ref(false);
 const form = ref({
-  sourceChannel: '',
   clientName: '',
+  clientType: 'INDIVIDUAL' as ClientType,
+  contactName: '',
   contactMobile: '',
   contactEmail: '',
-  legalIssueType: '',
-  urgencyLevel: 'MEDIUM' as any,
 });
 const saving = ref(false);
 
 async function load() {
   loading.value = true;
   try {
-    const res = await http.page<Lead>('/leads', { page: page.value, pageSize: pageSize.value });
+    const res = await http.page<Client>('/clients', { page: page.value, pageSize: pageSize.value });
     items.value = res.items;
     total.value = res.total;
   } finally {
@@ -34,16 +32,16 @@ async function load() {
   }
 }
 
-function goDetail(row: Lead) {
-  router.push(`/leads/${row.id}`);
+function goDetail(row: Client) {
+  router.push(`/clients/${row.id}`);
 }
 
 async function create() {
   saving.value = true;
   try {
-    await http.post('/leads', form.value);
+    await http.post('/clients', form.value);
     dialogVisible.value = false;
-    form.value = { sourceChannel: '', clientName: '', contactMobile: '', contactEmail: '', legalIssueType: '', urgencyLevel: 'MEDIUM' };
+    form.value = { clientName: '', clientType: 'INDIVIDUAL', contactName: '', contactMobile: '', contactEmail: '' };
     await load();
   } finally {
     saving.value = false;
@@ -57,21 +55,24 @@ onMounted(load);
   <div>
     <div style="display: flex; justify-content: space-between; align-items: center">
       <div>
-        <h2>线索看板</h2>
-        <p style="color: #888">任务书 6.2 / 7.2 · 线索全生命周期</p>
+        <h2>客户中心</h2>
+        <p style="color: #888">任务书 8.9 / 13.x · 客户全生命周期管理</p>
       </div>
-      <el-button type="primary" @click="dialogVisible = true">+ 新建线索</el-button>
+      <el-button type="primary" @click="dialogVisible = true">+ 新建客户</el-button>
     </div>
+
     <el-table v-loading="loading" :data="items" stripe style="margin-top: 16px" @row-click="goDetail">
       <el-table-column prop="clientName" label="客户名称" />
-      <el-table-column prop="sourceChannel" label="来源" width="120" />
-      <el-table-column prop="legalIssueType" label="问题类型" width="160" />
-      <el-table-column prop="urgencyLevel" label="紧急程度" width="120" />
-      <el-table-column label="状态" width="160">
+      <el-table-column prop="clientType" label="类型" width="120">
         <template #default="{ row }">
-          {{ LEAD_STATUS_NAME[row.intakeStatus as keyof typeof LEAD_STATUS_NAME] }}
+          <el-tag>{{ row.clientType === 'ENTERPRISE' ? '企业' : '个人' }}</el-tag>
         </template>
       </el-table-column>
+      <el-table-column prop="contactName" label="联系人" width="120" />
+      <el-table-column prop="contactMobile" label="联系电话" width="140" />
+      <el-table-column prop="riskLevel" label="风险等级" width="100" />
+      <el-table-column prop="healthScore" label="健康分" width="100" />
+      <el-table-column prop="status" label="状态" width="100" />
       <el-table-column prop="createdAt" label="创建时间" width="180" />
     </el-table>
     <el-pagination
@@ -83,24 +84,19 @@ onMounted(load);
       @current-change="load"
     />
 
-    <el-dialog v-model="dialogVisible" title="新建线索" width="500px">
+    <el-dialog v-model="dialogVisible" title="新建客户" width="500px">
       <el-form :model="form" label-position="top">
         <el-form-item label="客户名称">
           <el-input v-model="form.clientName" />
         </el-form-item>
-        <el-form-item label="来源渠道">
-          <el-input v-model="form.sourceChannel" placeholder="如抖音/官网/转介绍" />
+        <el-form-item label="客户类型">
+          <el-radio-group v-model="form.clientType">
+            <el-radio label="INDIVIDUAL">个人</el-radio>
+            <el-radio label="ENTERPRISE">企业</el-radio>
+          </el-radio-group>
         </el-form-item>
-        <el-form-item label="问题类型">
-          <el-input v-model="form.legalIssueType" placeholder="案由" />
-        </el-form-item>
-        <el-form-item label="紧急程度">
-          <el-select v-model="form.urgencyLevel" style="width: 100%">
-            <el-option label="低" value="LOW" />
-            <el-option label="中" value="MEDIUM" />
-            <el-option label="高" value="HIGH" />
-            <el-option label="紧急" value="URGENT" />
-          </el-select>
+        <el-form-item label="联系人">
+          <el-input v-model="form.contactName" />
         </el-form-item>
         <el-form-item label="联系电话">
           <el-input v-model="form.contactMobile" />
