@@ -19,6 +19,10 @@ jobs:
       - uses: pnpm/action-setup@v4
         with:
           version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
 
@@ -31,6 +35,10 @@ jobs:
       - uses: pnpm/action-setup@v4
         with:
           version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: api unit tests
         run: pnpm --filter @lm-unity/api test
@@ -67,6 +75,10 @@ jobs:
       - uses: pnpm/action-setup@v4
         with:
           version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Generate Prisma Client
         run: pnpm --filter @lm-unity/api prisma:generate
