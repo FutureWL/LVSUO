@@ -1,0 +1,92 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# cancel-in-progress: Gitea 1.26+ 支持(自动取消之前的 run)
+concurrency:
+  group: ${{ gitea.ref }}-${{ gitea.event }}
+  cancel-in-progress: true
+
+jobs:
+  # ============ 1. 类型检查(最快,先跑) ============
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+
+  # ============ 2. 单元测试(后端 + 前端) ============
+  test-unit:
+    runs-on: ubuntu-latest
+    # 等 typecheck 过了再跑
+    needs: typecheck
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # 后端单元:149 例(web/前端都用同一 compose 跑)
+      - name: api unit tests
+        run: pnpm --filter @lm-unity/api test
+      - name: web unit tests
+        run: pnpm --filter @lm-unity/web-admin test
+
+  # ============ 3. 后端 jest e2e(需要 Postgres) ============
+  # 在 host 上起一个隔离的 postgres-test,跑完即销毁
+  test-e2e-api:
+    runs-on: ubuntu-latest
+    needs: typecheck
+    services:
+      postgres-test:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: lmsuo
+          POSTGRES_PASSWORD: lmsuo_test_pw
+          POSTGRES_DB: lmsuo_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U lmsuo"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://lmsuo:lmsuo_test_pw@localhost:5432/lmsuo_test?schema=public
+      JWT_SECRET: ci-jwt-secret-must-be-at-least-32-characters-long
+      APP_PORT: "3080"
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Generate Prisma Client
+        run: pnpm --filter @lm-unity/api prisma:generate
+      - name: Run migrations
+        run: pnpm --filter @lm-unity/api exec prisma migrate deploy
+      - name: Seed e2e tenant
+        run: pnpm --filter @lm-unity/api exec tsx prisma/e2e-seed.ts
+      - name: Run jest e2e
+        run: pnpm --filter @lm-unity/api test:e2e
