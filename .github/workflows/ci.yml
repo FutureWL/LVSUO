@@ -23,7 +23,9 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Generate Prisma Client
-        run: pnpm --filter @lm-unity/api prisma:generate
+        # 显式 cd 到 api 包,确保 prisma generate 找对 schema
+        # 之前 pnpm --filter 跑过但 clean clone 后 .prisma/client 仍空
+        run: cd apps/api && pnpm prisma:generate
       - run: pnpm typecheck
 
   # ============ 2. 单元测试(后端 + 前端) ============
@@ -39,7 +41,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Generate Prisma Client
-        run: pnpm --filter @lm-unity/api prisma:generate
+        run: cd apps/api && pnpm prisma:generate
       - name: api unit tests
         run: pnpm --filter @lm-unity/api test
       - name: web unit tests
@@ -79,7 +81,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Generate Prisma Client
-        run: pnpm --filter @lm-unity/api prisma:generate
+        run: cd apps/api && pnpm prisma:generate
       - name: Run migrations
         run: pnpm --filter @lm-unity/api exec prisma migrate deploy
       - name: Seed e2e tenant
