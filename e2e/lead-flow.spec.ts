@@ -22,7 +22,7 @@ async function setAuth(page: Page, request: APIRequestContext) {
     },
   });
   const { accessToken, user } = await res.json();
-  await page.goto('/');
+  await page.goto('/lvsuo/');
   await page.evaluate(
     ({ token, userStr }) => {
       localStorage.setItem('lmsuo_token', token);
@@ -43,7 +43,7 @@ test.describe('线索完整流程(e2e)', () => {
     page.on('console', (msg) => {
       if (msg.type() === 'error') console.log('CONSOLE ERR:', msg.text().slice(0, 200));
     });
-    await page.goto('/leads');
+    await page.goto('/lvsuo/leads');
     await expect(page.getByText('线索看板').first()).toBeVisible({ timeout: 10_000 });
     await expect(page.getByPlaceholder('按客户名 / 手机号搜索')).toBeVisible();
     await expect(page.getByRole('button', { name: /新建线索/ })).toBeVisible();
@@ -51,7 +51,7 @@ test.describe('线索完整流程(e2e)', () => {
 
   test('搜索:输入关键字 → 输入框保留值', async ({ page, request }) => {
     await setAuth(page, request);
-    await page.goto('/leads');
+    await page.goto('/lvsuo/leads');
     const searchBox = page.getByPlaceholder('按客户名 / 手机号搜索');
     await searchBox.fill('王');
     await searchBox.press('Enter');
@@ -61,7 +61,7 @@ test.describe('线索完整流程(e2e)', () => {
 
   test('新建线索:打开对话框 → 填表 → 保存 → 列表出现', async ({ page, request }) => {
     await setAuth(page, request);
-    await page.goto('/leads');
+    await page.goto('/lvsuo/leads');
     await page.getByRole('button', { name: /新建线索/ }).click();
     await expect(page.getByText('新建线索').first()).toBeVisible();
     const unique = `E2E测试-${Date.now()}`;

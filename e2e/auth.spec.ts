@@ -31,7 +31,7 @@ async function fillLoginForm(
 
 test.describe('登录流程(生产 e2e)', () => {
   test('错误密码 → 留在 /login + toast 弹错', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto('/lvsuo/login');
     await fillLoginForm(page, { password: 'wrong-password' });
     await page.getByRole('button', { name: '登录' }).click();
     // 还在登录页
@@ -56,12 +56,12 @@ test.describe('登录流程(生产 e2e)', () => {
   });
 
   test('未登录访问 /dashboard → 跳 /login(带 redirect query)', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/lvsuo/');
     await page.evaluate(() => {
       localStorage.removeItem('lmsuo_token');
       localStorage.removeItem('lmsuo_user');
     });
-    await page.goto('/dashboard');
+    await page.goto('/lvsuo/dashboard');
     await page.waitForURL(/\/login/, { timeout: 5_000 });
     expect(page.url()).toContain('redirect=');
   });
@@ -77,7 +77,7 @@ test.describe('登录流程(生产 e2e)', () => {
     });
     const { accessToken, user } = await res.json();
     // 写到 web 的 localStorage
-    await page.goto('/');
+    await page.goto('/lvsuo/');
     await page.evaluate(
       ({ token, userStr }) => {
         localStorage.setItem('lmsuo_token', token);
@@ -86,7 +86,7 @@ test.describe('登录流程(生产 e2e)', () => {
       { token: accessToken, userStr: JSON.stringify(user) },
     );
     // 访问 /dashboard
-    await page.goto('/dashboard');
+    await page.goto('/lvsuo/dashboard');
     await page.waitForTimeout(2000);
     expect(page.url()).toContain('/dashboard');
   });
