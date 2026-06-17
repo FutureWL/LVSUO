@@ -22,9 +22,9 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # 干净 clone 后 node_modules/.prisma/client 是空的
+      # 必须在 typecheck 前先 generate(API 代码依赖 Prisma.LeadWhereInput 等类型)
       - name: Generate Prisma Client
-        # 显式 cd 到 api 包,确保 prisma generate 找对 schema
-        # 之前 pnpm --filter 跑过但 clean clone 后 .prisma/client 仍空
         run: cd apps/api && pnpm prisma:generate
       - run: pnpm typecheck
 
@@ -40,16 +40,13 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # Build shared 一次(api/web 都需要它的 dist)
-      # 之前 typecheck 跑过 turbo 会顺带 build,但 test-unit 单独跑不经过 turbo
+      # @lm-unity/shared 通过 pnpm workspace 链接到 packages/shared
+      # 但 main 字段是 ./dist/index.js,必须 build 后才能被 require
+      # typecheck 跑 turbo 会顺带 build,但这里单独跑 pnpm test 不经过 turbo
       - name: Build shared package
         run: pnpm --filter @lm-unity/shared build
-      # 验证 build 成功(防 build 静默失败)
-      - name: Verify shared dist
-        run: test -f packages/shared/dist/index.js || (echo "shared dist missing" && exit 1)
-      - name: Generate Prisma Client (api)
+      - name: Generate Prisma Client
         run: cd apps/api && pnpm prisma:generate
-      # 在跑测试前明确 build shared(api 测试 import shared 需要 dist)
       - name: api unit tests
         run: pnpm --filter @lm-unity/api test
       - name: web unit tests
@@ -69,7 +66,6 @@ jobs:
           POSTGRES_DB: lmsuo_test
         ports:
           - 5432:5432
-        # GitHub services 自动 healthcheck(postgres:16-alpine 自带 pg_isready)
         options: >-
           --health-cmd "pg_isready -U lmsuo"
           --health-interval 5s

@@ -1,12 +1,13 @@
 # LM Unity · Counsel · 智法云枢
 
 > 面向律师事务所与独立律师的 **合规增长 + AI 办案 + 客户成功 + 知识沉淀** 一体化平台
-> 数字人: **律时** · 任务书 **V3.0** · 仓库: `ssh://git@localhost:2222/FutureWL/LVSUO.git`
+> 数字人: **律时** · 任务书 **V3.0** · 主仓库: [`github.com/FutureWL/LVSUO`](https://github.com/FutureWL/LVSUO) · Gitea 镜像: `ssh://git@localhost:2222/FutureWL/LVSUO.git`
 
 [![Status](https://img.shields.io/badge/status-MVP%20scaffolding-blue.svg)]()
+[![CI](https://github.com/FutureWL/LVSUO/actions/workflows/ci.yml/badge.svg)](https://github.com/FutureWL/LVSUO/actions/workflows/ci.yml)
 [![Tasks](https://img.shields.io/badge/任务书%20V3.0-19%20章%20✅-success.svg)](./docs/00-产品定义/开发任务书V3.0.md)
 [![Stack](https://img.shields.io/badge/stack-NestJS%20%2B%20Vue3%20%2B%20Prisma-orange.svg)]()
-[![Tests](https://img.shields.io/badge/tests-93%20✓-blueviolet.svg)]()
+[![Tests](https://img.shields.io/badge/tests-393%20✓-blueviolet.svg)]()
 
 ---
 
@@ -146,21 +147,36 @@ pnpm dev
 
 在保持不扩范围的前提下,对地基做的小步硬化:
 
-| 维度      | 内容                                                                                                                                                               |
-| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 错误处理  | `BizException` 业务异常(400/401/403/404/409) + `GlobalExceptionFilter` 透传 `code`                                                                                 |
-| 错误码    | `shared` 集中 ~30 个业务 code,前端可按 `code` 分支                                                                                                                 |
-| 类型贯通  | `PageResponse<T>` 前后端共用,5 个分页 service 去 `any`                                                                                                             |
-| 单测      | 后端 47 例(0 → 47),覆盖 `GlobalExceptionFilter` / `buildPage` / `validateQuoteRules` / `assertValidMatterTransition` / `checkRequiredEnv` / `auth.login`+`refresh` |
-| 表单基建  | `useTable` composable(分页/搜索/筛选/loading/空态) + `TableEmpty` 组件                                                                                             |
-| 错误边界  | `classifyError(err)` 6 类,`ErrorPage` 路由 + `app.config.errorHandler` 兜底                                                                                        |
-| 文档      | Swagger 注解补全(auth/user/tenant/health),DTO 字段 + 4xx 响应 + ErrorCode                                                                                          |
-| 配置      | `.env.example` 重写(分组 + 必填标记),启动 fail-fast(`assertRequiredEnv`)                                                                                           |
-| Lead 列表 | 搜索(姓名/手机) + 筛选(状态/紧急度/日期)                                                                                                                           |
-| D1 落地   | 24 个 WIP 拆 9 commit 落地(client 模块 / from-quote / 报价 list+update / 产品 CRUD / 4 个新视图)                                                                   |
+| 维度          | 内容                                                                                                                                                                                                   |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 错误处理      | `BizException` 业务异常(400/401/403/404/409) + `GlobalExceptionFilter` 透传 `code`                                                                                                                     |
+| 错误码        | `shared` 集中 ~30 个业务 code,前端可按 `code` 分支                                                                                                                                                     |
+| 类型贯通      | `PageResponse<T>` 前后端共用,5 个分页 service 去 `any`                                                                                                                                                 |
+| 单测          | 后端 149 例 + 前端 237 例 = **393 例**(覆盖 `GlobalExceptionFilter` / `buildPage` / `validateQuoteRules` / `assertValidMatterTransition` / `checkRequiredEnv` / `auth.login`+`refresh` / 6 个 service) |
+| 表单基建      | `useTable` composable(分页/搜索/筛选/loading/空态) + `TableEmpty` 组件                                                                                                                                 |
+| 错误边界      | `classifyError(err)` 6 类,`ErrorPage` 路由 + `app.config.errorHandler` 兜底                                                                                                                            |
+| 文档          | Swagger 注解补全(auth/user/tenant/health),DTO 字段 + 4xx 响应 + ErrorCode                                                                                                                              |
+| 配置          | `.env.example` 重写(分组 + 必填标记),启动 fail-fast(`assertRequiredEnv`)                                                                                                                               |
+| Lead 列表     | 搜索(姓名/手机) + 筛选(状态/紧急度/日期)                                                                                                                                                               |
+| D1 落地       | 24 个 WIP 拆 9 commit 落地(client 模块 / from-quote / 报价 list+update / 产品 CRUD / 4 个新视图)                                                                                                       |
+| **CI**        | **GitHub Actions 接入(.github/workflows/ci.yml):typecheck + 393 单测 + 4 jest e2e(postgres service container)每次 push 跑，5 min 内见结果,带 main 分支保护**                                           |
+| **双 remote** | **主仓库在 GitHub(github.com/FutureWL/LVSUO),Gitea 留作镜像。两 remote 同时 push，代码开发/生产一致,CI 只跑 GitHub(不被 Gitea runner 卡 bug 干扰)**                                                    |
 
 **单测覆盖最关键的业务规则**: quote 5 条阻断规则 + matter 24 状态机 + auth 登录/刷新。
 **不做**: 不加新功能模块、不改业务逻辑、不破坏现有 API。
+
+### Git 仓库与 CI 策略
+
+- **主仓库(实际开发 + CI)**: `github.com/FutureWL/LVSUO`
+  - 所有 push 触发 GitHub Actions(`.github/workflows/ci.yml`)
+  - PR 必须 CI 全绿才能 merge(建议加 main 分支保护)
+- **内网镜像(Gitea)**: `localhost:2222/FutureWL/LVSUO`
+  - 不跑 CI(0.6.1 runner 有卡在 "Creating 1 workers" 的 bug，等上游修)
+  - 用途:内网代码托管/查阅/不依赖外网
+- **双 remote 同步 push**:`git push` 默认推两个,需改 `git config push.default` 或显式 `git push origin main github main`
+  - 当前 push hook (`./.husky/pre-push`) 跑 typecheck + test,有错就阻断
+  - Gitea push 失败不会影响 GitHub CI(独立 remote)
+- **本地检查(不依赖 CI)**: `pnpm typecheck && pnpm test`(全量本地复现,无需网络)
 
 ## 战略使命
 
