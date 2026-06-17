@@ -6,9 +6,8 @@ on:
   pull_request:
     branches: [main]
 
-# cancel-in-progress: Gitea 1.26+ 支持(自动取消之前的 run)
 concurrency:
-  group: ${{ gitea.ref }}-${{ gitea.event }}
+  group: ${{ github.ref }}-${{ github.event }}
   cancel-in-progress: true
 
 jobs:
@@ -30,7 +29,6 @@ jobs:
   # ============ 2. 单元测试(后端 + 前端) ============
   test-unit:
     runs-on: ubuntu-latest
-    # 等 typecheck 过了再跑
     needs: typecheck
     steps:
       - uses: actions/checkout@v4
@@ -42,14 +40,13 @@ jobs:
           node-version: 20
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # 后端单元:149 例(web/前端都用同一 compose 跑)
       - name: api unit tests
         run: pnpm --filter @lm-unity/api test
       - name: web unit tests
         run: pnpm --filter @lm-unity/web-admin test
 
-  # ============ 3. 后端 jest e2e(需要 Postgres) ============
-  # 在 host 上起一个隔离的 postgres-test,跑完即销毁
+  # ============ 3. 后端 jest e2e(需 Postgres) ============
+  # GitHub service container:起隔离的 postgres-test,跑完即销毁
   test-e2e-api:
     runs-on: ubuntu-latest
     needs: typecheck
@@ -62,6 +59,7 @@ jobs:
           POSTGRES_DB: lmsuo_test
         ports:
           - 5432:5432
+        # GitHub services 自动 healthcheck(postgres:16-alpine 自带 pg_isready)
         options: >-
           --health-cmd "pg_isready -U lmsuo"
           --health-interval 5s
