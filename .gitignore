@@ -61,3 +61,4 @@ apps/*/.vite/
 
 # ============ Backend (NestJS) ============
 apps/api/coverage/
+test-results/

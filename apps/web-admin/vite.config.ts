@@ -31,20 +31,20 @@ export default defineConfig(({ mode }) => {
       },
     },
     server: {
-      port: 5173,
+      port: 37001,
       // 允许通过 nginx 反向代理后的公网域名访问 dev server
       allowedHosts: ['wxf-prod.huntercat.cn'],
       proxy: {
         // 1) 直接访问 vite 时的 API 代理
-        //    http://localhost:5173/api/... → 后端
+        //    http://localhost:37001/api/... → 后端
         '/api': {
-          target: env.VITE_API_PROXY_TARGET || 'http://localhost:3000',
+          target: env.VITE_API_PROXY_TARGET || 'http://localhost:37000',
           changeOrigin: true,
         },
         // 2) 通过 nginx 子目录代理时的 API 路径
         //    /lvsuo/api/auth/login → /api/counsel/v1/auth/login
         '/lvsuo/api': {
-          target: env.VITE_API_PROXY_TARGET || 'http://localhost:3000',
+          target: env.VITE_API_PROXY_TARGET || 'http://localhost:37000',
           changeOrigin: true,
           rewrite: (p) => p.replace(/^\/lvsuo\/api/, '/api/counsel/v1'),
         },

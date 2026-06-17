@@ -15,7 +15,7 @@ async function bootstrap() {
   // 启动前校验关键环境变量,缺了直接抛错(不进入 listen)
   assertRequiredEnv(config);
 
-  const port = config.get<number>('APP_PORT', 3000);
+  const port = config.get<number>('APP_PORT', 37000);
   const prefix = config.get<string>('APP_GLOBAL_PREFIX', 'api/counsel/v1');
   const origins = config
     .get<string>('APP_CORS_ORIGINS', '')

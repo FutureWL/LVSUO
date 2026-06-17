@@ -33,10 +33,10 @@ pnpm e2e -- --headed
 pnpm e2e -- --debug
 ```
 
-## 端口(避开 3000/5173 dev server)
+## 端口(37000+ 区间,本地 + CI 统一)
 
-- api: 3080
-- web: 5180
+- api: 37002
+- web: 37003
 
 ## 当前 spec
 
@@ -71,7 +71,7 @@ setAuth + navigation(用 context.addInitScript)。
   因为 vite proxy `/lvsuo/api` 才走 rewrite,`/api` 直通不会改路径
 - **api JWT_SECRET**: .env 的 JWT_SECRET 是 .env.example 默认值会被 assertRequiredEnv 拦,
   跑前必须改成 ≥32 字符的真 secret
-- **port 冲突**: 当前用 3080/5180 避开 3000/5173。如果这些也被占,改 playwright.config.ts
+- **port 冲突**: 当前用 37002/37003 在 37000+ 区间(避开 30000-37000 高占用段)。如果这些也被占,改 playwright.config.ts
 - **pnpm run dev vs pnpm exec vite**: pnpm run dev 在某些环境下不传递 env,
   playwright config 用 pnpm exec vite(更稳)
 

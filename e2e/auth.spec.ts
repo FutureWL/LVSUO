@@ -17,7 +17,7 @@ const TEST_TENANT = {
   username: process.env.E2E_USERNAME ?? 'e2e-admin',
   password: process.env.E2E_PASSWORD ?? 'E2eTest12345678',
 };
-const API = 'http://127.0.0.1:3080/api/counsel/v1';
+const API = 'http://127.0.0.1:37002/api/counsel/v1';
 
 async function fillLoginForm(
   page: Page,

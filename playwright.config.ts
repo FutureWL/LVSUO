@@ -25,11 +25,12 @@ import { defineConfig, devices } from '@playwright/test';
  *  - VITE_API_PROXY_TARGET 指 api 端口
  *
  * 端口避开 3000/5173(避免与 dev server 冲突)
- *  - api: 3080
- *  - web: 5180
+ * 全部上移到 37000+ 区间(本地 + CI 统一,避开 30000-37000 大段高占用)
+ *  - api: 37002
+ *  - web: 37003
  */
-const PORT_API = 3080;
-const PORT_WEB = 5180;
+const PORT_API = 37002;
+const PORT_WEB = 37003;
 const HOST = '127.0.0.1';
 const IS_CI = !!process.env.CI;
 
