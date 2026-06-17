@@ -132,10 +132,11 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Build shared package
         run: pnpm --filter @lm-unity/shared build
-      - name: Build api (需要 dist/)
-        run: cd apps/api && pnpm build
+      # prisma generate 必须在 nest build 之前(否则 TS 找不到 PrismaClient 类型)
       - name: Generate Prisma Client
         run: cd apps/api && pnpm prisma:generate
+      - name: Build api (需要 dist/)
+        run: cd apps/api && pnpm build
       - name: Run migrations
         run: cd apps/api && pnpm exec prisma migrate deploy
       - name: Seed e2e tenant
