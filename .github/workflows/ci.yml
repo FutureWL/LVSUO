@@ -44,8 +44,12 @@ jobs:
       # 之前 typecheck 跑过 turbo 会顺带 build,但 test-unit 单独跑不经过 turbo
       - name: Build shared package
         run: pnpm --filter @lm-unity/shared build
-      - name: Generate Prisma Client
+      # 验证 build 成功(防 build 静默失败)
+      - name: Verify shared dist
+        run: test -f packages/shared/dist/index.js || (echo "shared dist missing" && exit 1)
+      - name: Generate Prisma Client (api)
         run: cd apps/api && pnpm prisma:generate
+      # 在跑测试前明确 build shared(api 测试 import shared 需要 dist)
       - name: api unit tests
         run: pnpm --filter @lm-unity/api test
       - name: web unit tests
