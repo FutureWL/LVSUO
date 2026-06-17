@@ -12,10 +12,17 @@ import { defineConfig, devices } from '@playwright/test';
  *  pnpm e2e -- --headed  # 看浏览器
  *  pnpm e2e -- login    # 跑 login spec
  *
- * 前提:
- *  - apps/api/.env 配好 JWT_SECRET(≥32字符)/ DATABASE_URL(Postgres 可达)
+ * CI 模式 (CI=1):
+ *  - .env 文件不存在(不在 git tracked),用 env vars 注入配置
+ *  - DB 由外部 postgres service container 提供(localhost:5432)
+ *  - API 跑 migrate deploy 初始化 schema
+ *  - 关掉 reuseExistingServer(强制新进程)
+ *
+ * 本地:
+ *  - apps/api/.env 配好 JWT_SECRET(≥32字符)/ DATABASE_URL
  *  - prisma migrate 跑过
  *  - 跑过 apps/api/prisma/e2e-seed.ts 创建 e2e 租户
+ *  - VITE_API_PROXY_TARGET 指 api 端口
  *
  * 端口避开 3000/5173(避免与 dev server 冲突)
  *  - api: 3080
@@ -24,14 +31,15 @@ import { defineConfig, devices } from '@playwright/test';
 const PORT_API = 3080;
 const PORT_WEB = 5180;
 const HOST = '127.0.0.1';
+const IS_CI = !!process.env.CI;
 
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: false,
-  forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
+  forbidOnly: IS_CI,
+  retries: IS_CI ? 2 : 0,
   workers: 1,
-  reporter: process.env.CI ? [['github'], ['html', { open: 'never' }]] : 'list',
+  reporter: IS_CI ? [['github'], ['html', { open: 'never' }]] : 'list',
   timeout: 60_000,
   expect: { timeout: 8_000 },
   use: {
@@ -42,30 +50,33 @@ export default defineConfig({
     actionTimeout: 10_000,
     navigationTimeout: 20_000,
   },
-  projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-    // 注释掉 webkit / firefox — 需要本地装浏览器才不挂
-    // { name: 'webkit', use: { ...devices['Desktop Safari'] } },
-    // { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
-  ],
+  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: [
     {
-      // apps/api 在 3080(node --env-file 依赖 cwd 找 .env)
-      // APP_PORT 覆盖默认 3000
-      command: `bash -c "cd apps/api && APP_PORT=${PORT_API} node --env-file=.env dist/main.js"`,
+      // api 启动:CI 用 env vars 注入配置,本地用 .env
+      command: IS_CI
+        ? `bash -c "cd apps/api && APP_PORT=${PORT_API} JWT_SECRET=\${JWT_SECRET} DATABASE_URL=\${DATABASE_URL} APP_GLOBAL_PREFIX=api/counsel/v1 node dist/main.js"`
+        : `bash -c "cd apps/api && APP_PORT=${PORT_API} node --env-file=.env dist/main.js"`,
       url: `http://${HOST}:${PORT_API}/api/counsel/v1/health`,
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: !IS_CI,
       timeout: 60_000,
       stdout: 'pipe',
       stderr: 'pipe',
+      // 把 workflow 里的 env 传给 webServer(api 需要 JWT_SECRET/DATABASE_URL)
+      env: IS_CI
+        ? {
+            JWT_SECRET: process.env.JWT_SECRET,
+            DATABASE_URL: process.env.DATABASE_URL,
+          }
+        : undefined,
     },
     {
-      // apps/web-admin 在 5180
-      // 保持 .env 的 VITE_BASE_PATH=/lvsuo/(与生产部署一致)
-      // pnpm exec vite 避开 pnpm run dev 的环境变量传递问题
-      command: `bash -c "cd apps/web-admin && pnpm exec vite --port ${PORT_WEB} --strictPort --host ${HOST}"`,
+      // web 启动:CI 用 VITE_API_PROXY_TARGET 指 api 端口
+      command: IS_CI
+        ? `bash -c "cd apps/web-admin && VITE_BASE_PATH=/lvsuo/ VITE_API_PROXY_TARGET=http://${HOST}:${PORT_API} pnpm exec vite --port ${PORT_WEB} --strictPort --host ${HOST}"`
+        : `bash -c "cd apps/web-admin && pnpm exec vite --port ${PORT_WEB} --strictPort --host ${HOST}"`,
       url: `http://${HOST}:${PORT_WEB}/lvsuo/`,
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: !IS_CI,
       timeout: 60_000,
       stdout: 'pipe',
       stderr: 'pipe',

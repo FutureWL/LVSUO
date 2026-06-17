@@ -94,3 +94,70 @@ jobs:
         run: pnpm --filter @lm-unity/api exec tsx prisma/e2e-seed.ts
       - name: Run jest e2e
         run: pnpm --filter @lm-unity/api test:e2e
+
+  # ============ 4. Playwright e2e(端到端,只在 main 跑,失败不阻塞 PR) ============
+  # 起 api + web + chromium,跑真实浏览器测试
+  # 慢(8-12 min),只在 push main 跑(PR 上太重)
+  e2e-playwright:
+    runs-on: ubuntu-latest
+    needs: typecheck
+    if: github.ref == 'refs/heads/main'
+    continue-on-error: true  # 失败不阻塞,留 warning
+    services:
+      postgres-test:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: lmsuo
+          POSTGRES_PASSWORD: lmsuo_test_pw
+          POSTGRES_DB: lmsuo_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U lmsuo"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://lmsuo:lmsuo_test_pw@localhost:5432/lmsuo_test?schema=public
+      JWT_SECRET: ci-jwt-secret-must-be-at-least-32-characters-long
+      APP_PORT: "3080"
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build shared package
+        run: pnpm --filter @lm-unity/shared build
+      - name: Build api (需要 dist/)
+        run: cd apps/api && pnpm build
+      - name: Generate Prisma Client
+        run: cd apps/api && pnpm prisma:generate
+      - name: Run migrations
+        run: cd apps/api && pnpm exec prisma migrate deploy
+      - name: Seed e2e tenant
+        run: cd apps/api && pnpm exec tsx prisma/e2e-seed.ts
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Run playwright e2e
+        run: pnpm e2e
+        env:
+          # playwright 的 webServer.command 会读这些 env
+          CI: "true"
+      - name: Upload Playwright Report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+      - name: Upload Playwright Traces on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: test-results/
+          retention-days: 7
